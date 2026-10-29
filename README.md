@@ -1,43 +1,39 @@
-# Chameleon engine: rearranging a design for any canvas
+# Chameleon engine
 
-Our entry for the Adobe University Hackathon "Chameleon" challenge. Given a design (text, images, shapes) and a new canvas size, the engine returns the same elements re-laid-out so the result still looks designed: nothing stretched, nothing overlapping by accident, text readable, brand intact.
+Given a finished design (text, images, shapes) and a new canvas size, the engine returns the **same elements re-laid-out** for that canvas: rearranged, not stretched. It is a deterministic, offline, rule-based Python engine (`engine/resize.py`, only Pillow as a dependency): no model, no network, no image generation.
 
-The engine is `engine/resize.py` (pure Python, offline, only Pillow). How it works is explained in [APPROACH.md](APPROACH.md).
+## Approach
 
-## Run it
+1. **Understand the design.** Detect the full-bleed background (re-cropped with `cover`), decoration, and corner-anchored pieces. Bundle what the designer tied together (same `group_id`, a panel behind text, text on a picture, overlapping layers) into rigid clusters; let look-alike badges, tags and cards re-flow as a row or grid.
+2. **Search layouts.** Split the elements, in reading order, into 1-6 columns in every sensible way, and binary-search the largest scale at which everything fits. Text is wrapped and verified with the renderer's own wrapping rule and font metrics, so line counts match the render. Layouts are scored on size, legibility, hero-picture size and a column count that suits the canvas shape.
+3. **Place with intent.** Centred or edge-aligned like the source, hierarchy preserved (smaller source text never ends up bigger than larger text), labels centred on their buttons, decorations parked where they overlap least.
+4. **Never break the rules.** Same ids, nothing off-canvas, images keep their aspect ratio, fonts and copy untouched, z-order kept. Malformed input is cleaned up, and a safe fallback means the engine cannot crash.
+
+Details, limits and known weaknesses: [APPROACH.md](APPROACH.md).
+
+## Run
 
 ```bash
 pip install -r requirements.txt
-python -m engine.main            # every task in input/ -> output/<task>_output.json + .png
+python -m engine.main        # every task in input/ -> output/<task>_output.json + .png
 ```
 
-Exactly as the scorer runs it (Docker, no network):
+As the scorer runs it (Docker, no network):
 
 ```bash
 docker build --platform linux/amd64 -t my-chameleon-engine .
 docker run --rm --network none -v $(pwd)/input:/app/input -v $(pwd)/output:/app/output my-chameleon-engine
 ```
 
-## Viewer
+(PowerShell: use `${PWD}` instead of `$(pwd)`.)
+
+## Tests and extras
 
 ```bash
-python -m viewer.serve           # open http://127.0.0.1:5057
+python -m tests.test_engine                 # fast invariants, incl. wrap parity with the real renderer
+python -m tools.eval_matrix --only-errors   # 54 adversarial designs x 32 canvas sizes, strict checks
+python -m tools.fuzz --n 200 --seed 1       # random designs: crashes and rule violations
+python -m viewer.serve                      # viewer: pick a design and size, see before/after (localhost:5057)
 ```
 
-Pick a design and any target size; the original and the engine's result are drawn side by side with the real renderer. `viewer/gallery.html` is a pre-rendered version that opens in any browser with no setup (rebuild with `python -m viewer.build_static`).
-
-## Adobe Express add-on
-
-`addon/` is a minimal Express add-on (manifest v2, panel entry point) that shows the pre-rendered before/after results and, inside Express, can drop the result onto the canvas. Rebuild with `python -m viewer.build_addon`. It was checked in a browser at panel width but not inside Express itself.
-
-## Tests
-
-```bash
-python -m tests.test_engine                 # fast invariant tests
-python -m tools.make_tests                  # regenerate the 54 adversarial designs in tests/designs/
-python -m tools.eval_matrix --only-errors   # every design x 32 canvas sizes, strict checks
-python -m tools.fuzz --n 200 --seed 1       # random designs, hunts crashes and rule violations
-python -m tools.contrast                    # text contrast / busy-background analysis on rendered results
-```
-
-See APPROACH.md for what each check covers and the known limits. The organizers' original starter README is kept as [STARTER_README.md](STARTER_README.md); the rules are in [RULES.md](RULES.md).
+`viewer/gallery.html` is a pre-rendered viewer that opens in any browser; `addon/` is a small Adobe Express add-on version of it (`python -m viewer.build_addon`). The organizers' starter README is kept as [STARTER_README.md](STARTER_README.md).
