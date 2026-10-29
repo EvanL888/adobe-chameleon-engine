@@ -1,0 +1,109 @@
+{
+ "task_id": "t41_src_banner",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "wide banner source -> tall targets",
+ "source": {
+  "canvas": {
+   "width": 1600,
+   "height": 400
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1600,
+    "height": 400,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 40,
+    "y": 150,
+    "width": 260,
+    "height": 87,
+    "z_index": 226,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 360,
+    "y": 30,
+    "width": 340,
+    "height": 340,
+    "z_index": 227,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 760,
+    "y": 90,
+    "width": 560,
+    "height": 120,
+    "z_index": 228,
+    "content": "Banner headline here",
+    "font_family": "Solstice Serif",
+    "font_size": 56,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 760,
+    "y": 220,
+    "width": 560,
+    "height": 80,
+    "z_index": 229,
+    "content": "Short supporting line",
+    "font_family": "Solstice Sans",
+    "font_size": 26,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 1340,
+    "y": 150,
+    "width": 220,
+    "height": 70,
+    "z_index": 230,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 35.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 1340,
+    "y": 173.0,
+    "width": 220,
+    "height": 24.0,
+    "z_index": 231,
+    "content": "Shop now",
+    "font_family": "Solstice Sans",
+    "font_size": 20,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1600,
+  "height": 400
+ }
+}

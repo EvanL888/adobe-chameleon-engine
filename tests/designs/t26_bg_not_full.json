@@ -1,0 +1,58 @@
+{
+ "task_id": "t26_bg_not_full",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "bg image covers ~79% (not detected as full-bleed)",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 40,
+    "y": 40,
+    "width": 1000,
+    "height": 1270,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 500,
+    "width": 800,
+    "height": 160,
+    "z_index": 60,
+    "content": "Inset background",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 700,
+    "width": 800,
+    "height": 100,
+    "z_index": 61,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

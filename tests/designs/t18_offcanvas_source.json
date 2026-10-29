@@ -1,0 +1,79 @@
+{
+ "task_id": "t18_offcanvas_source",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "elements partly outside the source canvas",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "bleed1",
+    "type": "shape",
+    "x": -200,
+    "y": -200,
+    "width": 600,
+    "height": 600,
+    "z_index": 42,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.1
+   },
+   {
+    "id": "bleed2",
+    "type": "shape",
+    "x": 800,
+    "y": 800,
+    "width": 500,
+    "height": 500,
+    "z_index": 43,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.1
+   },
+   {
+    "id": "big",
+    "type": "image",
+    "x": -100,
+    "y": 100,
+    "width": 1300,
+    "height": 300,
+    "z_index": 44,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 600,
+    "width": 800,
+    "height": 200,
+    "z_index": 45,
+    "content": "Content with bleeding art",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

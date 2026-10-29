@@ -1,0 +1,81 @@
+{
+ "task_id": "t28_translucent_scrim_rect",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "translucent rectangle behind text (should travel with it)",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "scrim",
+    "type": "shape",
+    "x": 0,
+    "y": 760,
+    "width": 1080,
+    "height": 590,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(0,0,0,1)",
+    "opacity": 0.55
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 820,
+    "width": 900,
+    "height": 160,
+    "z_index": 66,
+    "content": "Text on a bottom scrim",
+    "font_family": "Solstice Serif",
+    "font_size": 66,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 1020,
+    "width": 800,
+    "height": 200,
+    "z_index": 67,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 340,
+    "y": 120,
+    "width": 400,
+    "height": 400,
+    "z_index": 68,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

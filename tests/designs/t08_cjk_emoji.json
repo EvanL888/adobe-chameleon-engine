@@ -1,0 +1,72 @@
+{
+ "task_id": "t08_cjk_emoji",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "CJK (no spaces), emoji, accents",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "zh",
+    "type": "text",
+    "x": 90,
+    "y": 250,
+    "width": 900,
+    "height": 200,
+    "z_index": 13,
+    "content": "夏日限定气泡饮品现已上市欢迎品尝",
+    "font_family": "Solstice Sans",
+    "font_size": 60,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "em",
+    "type": "text",
+    "x": 140,
+    "y": 520,
+    "width": 800,
+    "height": 100,
+    "z_index": 14,
+    "content": "Summer ☀️🍹 déjà-vu naïve café",
+    "font_family": "Solstice Sans",
+    "font_size": 44,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "jp",
+    "type": "text",
+    "x": 140,
+    "y": 700,
+    "width": 800,
+    "height": 100,
+    "z_index": 15,
+    "content": "黄金の時間を追いかけて",
+    "font_family": "Solstice Sans",
+    "font_size": 40,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

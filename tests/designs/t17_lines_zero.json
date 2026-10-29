@@ -1,0 +1,82 @@
+{
+ "task_id": "t17_lines_zero",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "opaque divider rule, zero-width line",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 200,
+    "width": 800,
+    "height": 150,
+    "z_index": 38,
+    "content": "Above the line",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "rule",
+    "type": "shape",
+    "x": 240,
+    "y": 400,
+    "width": 600,
+    "height": 3,
+    "z_index": 39,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)"
+   },
+   {
+    "id": "vline",
+    "type": "shape",
+    "x": 540,
+    "y": 450,
+    "width": 0,
+    "height": 200,
+    "z_index": 40,
+    "shape_type": "line",
+    "fill_color": "rgba(255,255,255,1)",
+    "stroke_color": "rgba(255,255,255,1)",
+    "stroke_width": 2
+   },
+   {
+    "id": "b",
+    "type": "text",
+    "x": 140,
+    "y": 700,
+    "width": 800,
+    "height": 150,
+    "z_index": 41,
+    "content": "Below the line",
+    "font_family": "Solstice Sans",
+    "font_size": 50,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

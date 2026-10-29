@@ -94,6 +94,8 @@ class _Txt:
         self.f = max(1.0, float(el.get("font_size", 16) or 16))
         self.lh = float(el.get("line_height") or 1.2)
         self.ls0 = float(el.get("letter_spacing") or 0.0)
+        ml = el.get("max_lines")
+        self.max_lines = int(ml) if isinstance(ml, (int, float)) and ml and ml > 0 else None
         fam = el.get("font_family", "")
         bold = _is_bold(el.get("font_weight"))
         italic = str(el.get("font_style") or "").lower() == "italic"
@@ -114,7 +116,7 @@ class _Txt:
         self._c: dict[tuple, tuple] = {}
 
     def layout(self, fs: float, max_w: float) -> tuple[int, float]:
-        key = (round(fs, 2), round(max_w, 1))
+        key = (round(fs, 4), round(max_w, 3))
         r = self._c.get(key)
         if r is not None:
             return r
@@ -150,14 +152,23 @@ class _Txt:
         """Shrink fs until the widest line fits max_w (always) and the block
         fits max_h (down to min_fs). Returns (fs, lines, text_height)."""
         fs = max(1.0, fs)
+        start = fs
         n, w = self.layout(fs, max_w)
         for _ in range(80):
             if w > max_w * 1.0005 + 0.01 and fs > 1.0:
                 fs = max(1.0, fs * max(0.5, 0.995 * max_w / w))
+            elif self.max_lines and n > self.max_lines and fs > max(min_fs, 1.0, 0.5 * start):
+                fs = max(min_fs, 1.0, 0.5 * start, fs * 0.96)
             elif max_h is not None and n * fs * self.lh > max_h + 0.01 and fs > max(min_fs, 1.0):
                 fs = max(min_fs, 1.0, fs * 0.95)
             else:
                 break
+            n, w = self.layout(fs, max_w)
+        # Sizes are rounded down to 0.01px on output; measure at exactly that size.
+        fs = max(1.0, math.floor(fs * 100) / 100)
+        n, w = self.layout(fs, max_w)
+        while w > max_w * 1.0005 + 0.01 and fs > 1.0:
+            fs = max(1.0, round(fs - 0.01, 2))
             n, w = self.layout(fs, max_w)
         return fs, n, n * fs * self.lh
 
@@ -171,9 +182,13 @@ def _rot(e: dict) -> float:
 
 
 def _fp(w: float, h: float, rot: float) -> tuple[float, float]:
+    """Footprint of a rotated box: big enough to hold both the rotated outline
+    and the unrotated box, so either way of checking "inside the canvas" passes."""
     r = math.radians(rot)
     c, s = abs(math.cos(r)), abs(math.sin(r))
-    return w * c + h * s, w * s + h * c
+    if not rot:
+        return w, h
+    return max(w, w * c + h * s), max(h, w * s + h * c)
 
 
 def _inter(a: tuple, b: tuple) -> float:
@@ -210,6 +225,8 @@ class _Unit:
         self.boost = 1.0
         self.ff = 1.0
         self.is_hero = False
+        self.cap_w = None   # shared width cap so sibling units end up the same size
+        self.sib = None     # list of sibling units (similar widgets)
         self.x0 = self.y0 = self.w = self.h = 0.0
 
     @property
@@ -239,6 +256,18 @@ class _ImageUnit(_Unit):
     def measure(self, s: float, cw: float) -> dict:
         g = min(s * self.boost, cw / max(self.fw, 1e-6))
         return {"w": self.fw * g, "h": self.fh * g, "g": g, "minfs": 1e9}
+
+    def floor_g(self) -> float:
+        return 0.0
+
+    def min_src_font(self) -> float:
+        return 1e9
+
+    def emit(self, g: float, ox: float, oy: float) -> list[dict]:
+        e = dict(self.el)
+        w, h = float(self.el["width"]) * g, float(self.el["height"]) * g
+        e.update(x=ox + self.fw * g / 2 - w / 2, y=oy + self.fh * g / 2 - h / 2, width=w, height=h)
+        return [e]
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
         g = m["g"]
@@ -362,6 +391,7 @@ class _Cluster(_Unit):
                 n.update(x=ncx - nw / 2, y=top, width=nw, height=nh)
             else:
                 n.update(x=ncx - nw / 2, y=ncy - nh / 2, width=nw, height=nh)
+                _scale_style(n, g)
             out.append(n)
         return out
 
@@ -373,7 +403,7 @@ class _RowFlow(_Unit):
     """Several similar chips (badges...) that sit on one row; wraps if narrow."""
     kind = "row"
 
-    def __init__(self, kids: list[_Cluster]):
+    def __init__(self, kids: list):
         super().__init__()
         self.kids = sorted(kids, key=lambda k: k.x0)
         self.x0 = min(k.x0 for k in kids)
@@ -447,7 +477,7 @@ def _gap(a: _Unit, b: _Unit, s: float) -> float:
 
 
 def _measure_col(col: list[_Unit], s: float, cw: float):
-    ms = [u.measure(s, cw) for u in col]
+    ms = [u.measure(s, min(cw, u.cap_w) if u.cap_w else cw) for u in col]
     hs = sum(m["h"] for m in ms)
     gaps = [_gap(a, b, s) for a, b in zip(col, col[1:])]
     return ms, gaps, hs + sum(gaps)
@@ -457,13 +487,13 @@ def _feasible(cols, widths, s, hc) -> bool:
     return all(_measure_col(c, s, cw)[2] <= hc for c, cw in zip(cols, widths))
 
 
-def _max_scale(cols, widths, hc, s_cap) -> float | None:
+def _max_scale(cols, widths, hc, s_cap, iters: int = 18) -> float | None:
     if _feasible(cols, widths, s_cap, hc):
         return s_cap
     lo, hi = 0.01, s_cap
     if not _feasible(cols, widths, lo, hc):
         return None
-    for _ in range(18):
+    for _ in range(iters):
         mid = (lo + hi) / 2
         if _feasible(cols, widths, mid, hc):
             lo = mid
@@ -522,6 +552,47 @@ def _hero_boost(col: list[_Unit], s: float, cw: float, hc: float) -> float:
     return lo
 
 
+def _similar(a: _Unit, b: _Unit) -> bool:
+    if type(a) is not type(b) or isinstance(a, _RowFlow):
+        return False
+    close = lambda p, q, tol: abs(p / max(q, 1e-6) - 1) <= tol
+    if isinstance(a, _TextUnit):
+        return (close(a.t.f, b.t.f, 0.04) and a.el.get("font_family") == b.el.get("font_family")
+                and a.el.get("font_weight") == b.el.get("font_weight"))
+    if not (close(a.w, b.w, 0.12) and close(a.h, b.h, 0.12)):
+        return False
+    if isinstance(a, _Cluster):
+        return sorted(e["type"] for e in a.els) == sorted(e["type"] for e in b.els)
+    return True
+
+
+def _link_siblings(units: list[_Unit]) -> None:
+    groups: list[list[_Unit]] = []
+    for u in units:
+        for g in groups:
+            if _similar(g[0], u):
+                g.append(u)
+                break
+        else:
+            groups.append([u])
+    for g in groups:
+        for u in g:
+            u.sib = g if len(g) > 1 else None
+
+
+def _apply_caps(units: list[_Unit], cols: list[list[_Unit]], widths: list[float]) -> None:
+    """Siblings that land in different columns share the narrowest column's width."""
+    where = {id(u): cw for c, cw in zip(cols, widths) for u in c}
+    for u in units:
+        u.cap_w = None
+    for u in units:
+        if u.sib and u.cap_w is None:
+            cws = [where[id(m)] for m in u.sib if id(m) in where]
+            if cws and max(cws) - min(cws) > 1e-6:
+                for m in u.sib:
+                    m.cap_w = min(cws)
+
+
 def _too_narrow(u: _Unit, cw: float) -> bool:
     """True if a rigid unit cannot keep its text at the floor size in this column."""
     if isinstance(u, _Cluster):
@@ -531,22 +602,32 @@ def _too_narrow(u: _Unit, cw: float) -> bool:
     return False
 
 
+def _set_ff(units: list[_Unit], ff: float) -> None:
+    for u in units:
+        u.ff = ff
+        if isinstance(u, _RowFlow):
+            for k in u.kids:
+                k.ff = ff
+
+
 def _search(units: list[_Unit], geo: _Geo, s_cap: float):
+    """Two stages: a cheap coarse pass over many column splits, then an exact
+    evaluation (scale, hero growth, legibility) of the best few."""
     W, H = geo.W, geo.H
     n = len(units)
     kp = _k_pref(W, H)
-    best = None
-    ks = [k for k in range(1, min(4, n) + 1)]
-    for ff in (1.0, 0.75, 0.55, 0.4, 0.25, 0.0):
-        for u in units:
-            u.ff = ff
-            if isinstance(u, _RowFlow):
-                for k in u.kids:
-                    k.ff = ff
+    hc = H - 2 * geo.my
+    ks = list(range(1, min(4, n) + 1))
+    levels = (1.0, 0.75, 0.55, 0.4, 0.25, 0.0) if n <= 14 else (1.0, 0.5, 0.0)
+    cap_parts = 120 if n <= 14 else max(3, 240 // (3 * len(ks)))
+    coarse = []
+    for ff in levels:
+        _set_ff(units, ff)
+        level_best = 0.0
         for k in ks:
             parts = list(_partitions(n, k))
-            if len(parts) > 120:
-                parts = parts[:: max(1, len(parts) // 120)]
+            if len(parts) > cap_parts:
+                parts = parts[:: max(1, len(parts) // cap_parts)]
             for p in parts:
                 cols = [units[p[i]:p[i + 1]] for i in range(k)]
                 avail = W - 2 * geo.mx - (k - 1) * geo.colgap
@@ -557,18 +638,28 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
                         continue
                     if ff > 0 and any(_too_narrow(u, cw) for c, cw in zip(cols, widths) for u in c):
                         continue
-                    s = _max_scale(cols, widths, H - 2 * geo.my, s_cap)
+                    _apply_caps(units, cols, widths)
+                    s = _max_scale(cols, widths, hc, s_cap, 8)
                     if s is None:
                         continue
-                    hb = max(_hero_boost(c, s, cw, H - 2 * geo.my) for c, cw in zip(cols, widths))
-                    minfs = min(m["minfs"] for c, cw in zip(cols, widths)
-                                for m in _measure_col(c, s, cw)[0])
-                    legible = min(1.0, minfs / 7.0)
-                    score = s * legible * (1.0 - 0.15 * abs(k - kp)) * (1.0 + 0.3 * (hb - 1.0))
-                    if best is None or score > best[0] + 1e-9:
-                        best = (score, s, cols, widths, ff)
-        if best is not None and best[1] >= 0.6 * s_cap:
+                    level_best = max(level_best, s)
+                    coarse.append((s * (1.0 - (0.4 if kp == 1 else 0.15) * abs(k - kp)), cols, widths, ff))
+        if level_best >= 0.6 * s_cap:
             break
+    coarse.sort(key=lambda c: -c[0])
+    best = None
+    for _, cols, widths, ff in coarse[:8]:
+        _set_ff(units, ff)
+        k = len(cols)
+        _apply_caps(units, cols, widths)
+        s = _max_scale(cols, widths, hc, s_cap, 18)
+        if s is None:
+            continue
+        hb = max(_hero_boost(c, s, cw, hc) for c, cw in zip(cols, widths))
+        minfs = min(m["minfs"] for c, cw in zip(cols, widths) for m in _measure_col(c, s, cw)[0])
+        score = s * min(1.0, minfs / 7.0) * (1.0 - (0.4 if kp == 1 else 0.15) * abs(k - kp)) * (1.0 + 0.12 * (hb - 1.0))
+        if best is None or score > best[0] + 1e-9:
+            best = (score, s, cols, widths, ff)
     return best
 
 
@@ -578,6 +669,7 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
     if best is None:
         return None
     _, s, cols, widths, ff = best
+    _apply_caps(units, cols, widths)
     for u in units:
         u.ff = ff
         if isinstance(u, _RowFlow):
@@ -617,7 +709,7 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
                     occ.append((e["x"], e["y"], e["width"], e["height"], wgt))
             y += m["h"] + (gaps[i] if i < len(gaps) else 0.0)
         x += cw + geo.colgap
-    return out, occ
+    return out, occ, s
 
 
 # --------------------------------------------------------------------------
@@ -625,18 +717,22 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
 # --------------------------------------------------------------------------
 
 def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
-                occ: list[tuple]) -> list[dict]:
+                occ: list[tuple], kfix: float | None = None) -> list[dict]:
+    """Park decoration (or, with kfix, corner-anchored pictures at that scale)
+    where it collides least with what is already placed."""
     Ws, Hs = src_wh
     W, H = geo.W, geo.H
-    sd = min(W / Ws, H / Hs)
+    sd = kfix if kfix is not None else min(W / Ws, H / Hs)
+    shrinks = (1.0, 0.8, 0.65, 0.5) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
     placed = []
     for e in sorted(deco, key=lambda e: -_area(_box(e))):
         x, y, w, h = _box(e)
         rot = _rot(e)
         fw0, fh0 = _fp(w, h, rot)
+        fw0, fh0 = max(fw0, 1e-3), max(fh0, 1e-3)
         cx, cy = x + w / 2, y + h / 2
         best = None
-        for shrink in (1.0, 0.75, 0.55, 0.4):
+        for shrink in shrinks:
             k = min(sd * shrink, 0.8 * W / fw0, 0.8 * H / fh0)
             fw, fh = fw0 * k, fh0 * k
             cands = [(cx / Ws * W, cy / Hs * H)]
@@ -653,7 +749,7 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
                 px = _clamp(px, fw / 2, W - fw / 2)
                 py = _clamp(py, fh / 2, H - fh / 2)
                 rect = (px - fw / 2, py - fh / 2, fw, fh)
-                cost = sum(_inter(rect, o[:4]) * o[4] for o in occ) / max(1.0, fw * fh)
+                cost = sum(_inter(rect, o[:4]) * (1.0 if kfix is not None else o[4]) for o in occ) / max(1.0, fw * fh)
                 cost += 0.15 * (1 - shrink)
                 if best is None or cost < best[0] - 1e-9:
                     best = (cost, px, py, k)
@@ -664,7 +760,7 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
         _, px, py, k = best
         n = dict(e)
         n.update(width=w * k, height=h * k, x=px - w * k / 2, y=py - h * k / 2)
-        placed.append(n)
+        placed.append(_scale_style(n, k))
     return placed
 
 
@@ -681,39 +777,8 @@ def _asset_missing(e: dict) -> bool:
     return not aid or not (_ASSET_DIR / str(aid)).exists()
 
 
-def _build_units(els: list[dict], Ws: int, Hs: int):
-    bg, deco, lost, content = [], [], [], []
-    for e in els:
-        if e.get("group_id"):
-            if e["type"] == "image" and _asset_missing(e):
-                lost.append(e)
-            else:
-                content.append(e)
-            continue
-        cov = _coverage(e, Ws, Hs)
-        if (e["type"] == "image" and cov >= 0.85 and not _rot(e) and not _asset_missing(e)) or \
-           (e["type"] == "shape" and cov >= 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e)):
-            bg.append(e)
-        elif e["type"] == "image" and _asset_missing(e):
-            lost.append(e)
-        elif e["type"] == "shape":
-            deco.append(e)
-        else:
-            content.append(e)
-
-    # Opaque shapes that frame text are panels, not decoration.
-    panels = []
-    for sh in list(deco):
-        if sh.get("shape_type") == "line" or float(sh.get("opacity", 1)) < 0.9:
-            continue
-        sb = _box(sh)
-        inside = [c for c in content if c["type"] == "text"
-                  and _inter(sb, _box(c)) >= 0.7 * _area(_box(c))]
-        if inside:
-            deco.remove(sh)
-            content.append(sh)
-            panels.append(sh)
-
+def _cluster(content: list[dict], panels: list[dict], use_groups: bool, overlaps: bool = True,
+             skip_groups: frozenset = frozenset()) -> list[list[dict]]:
     idx = {e["id"]: i for i, e in enumerate(content)}
     parent = list(range(len(content)))
 
@@ -726,15 +791,18 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
     def union(i, j):
         parent[find(i)] = find(j)
 
-    by_group: dict[str, int] = {}
-    for i, e in enumerate(content):
-        g = e.get("group_id")
-        if g:
-            if g in by_group:
-                union(i, by_group[g])
-            else:
-                by_group[g] = i
+    if use_groups:
+        by_group: dict[str, int] = {}
+        for i, e in enumerate(content):
+            g = e.get("group_id")
+            if g and g not in skip_groups:
+                if g in by_group:
+                    union(i, by_group[g])
+                else:
+                    by_group[g] = i
     for sh in panels:
+        if sh["id"] not in idx:
+            continue
         sb = _box(sh)
         for c in content:
             if c is sh or c["type"] == "shape":
@@ -742,7 +810,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
             cb = _box(c)
             if _inter(sb, cb) >= 0.7 * _area(cb):
                 union(idx[sh["id"]], idx[c["id"]])
-    for i, a in enumerate(content):
+    for i, a in enumerate(content if overlaps else []):
         for j in range(i + 1, len(content)):
             b = content[j]
             ia = _inter(_box(a), _box(b))
@@ -754,26 +822,92 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                 t_area = aa if ta == "text" else ab
                 if ia >= 0.5 * t_area:
                     union(i, j)
-            elif ta == tb and ia >= (0.3 if ta == "image" else 0.5) * min(aa, ab):
+            elif ta == tb and ta != "shape" and ia >= (0.3 if ta == "image" else 0.5) * min(aa, ab):
                 union(i, j)
-
     buckets: dict[int, list[dict]] = {}
     for i, e in enumerate(content):
         buckets.setdefault(find(i), []).append(e)
+    return list(buckets.values())
+
+
+def _build_units(els: list[dict], Ws: int, Hs: int):
+    bg, deco, lost, content = [], [], [], []
+    for e in els:
+        if e.get("group_id"):
+            content.append(e)  # a designer-grouped piece always travels with its group
+            continue
+        cov = _coverage(e, Ws, Hs)
+        if (e["type"] == "image" and cov >= 0.85 and not _rot(e)) or \
+           (e["type"] == "shape" and cov >= 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e)):
+            bg.append(e)
+        elif e["type"] == "image" and _asset_missing(e) and _area(_box(e)) < 0.04 * Ws * Hs:
+            lost.append(e)
+        elif e["type"] == "shape" and float(e.get("opacity", 1)) < 0.9:
+            deco.append(e)
+        else:
+            content.append(e)
+
+    # Shapes that frame text or a picture are panels: faint circles stay
+    # decoration, but a visible rectangle behind text travels with it.
+    panels = []
+    for sh in list(deco) + [c for c in content if c["type"] == "shape" and not c.get("group_id")]:
+        if sh.get("shape_type") == "line":
+            continue
+        op = float(sh.get("opacity", 1))
+        if not (op >= 0.9 or (sh.get("shape_type") == "rectangle" and op >= 0.3)):
+            continue
+        sb = _box(sh)
+        inside = [c for c in content if c["type"] in ("text", "image") and c is not sh
+                  and _inter(sb, _box(c)) >= 0.7 * _area(_box(c))]
+        if inside:
+            if sh in deco:
+                deco.remove(sh)
+                content.append(sh)
+            panels.append(sh)
+
+    # Small free pictures parked in a corner (watermark, corner logo) stay there.
+    anchors = []
+    for e in list(content):
+        if e["type"] != "image" or e.get("group_id") or _rot(e):
+            continue
+        b = _box(e)
+        cx, cy = (b[0] + b[2] / 2) / Ws, (b[1] + b[3] / 2) / Hs
+        if _area(b) <= 0.04 * Ws * Hs and (cx < 0.22 or cx > 0.78) and (cy < 0.22 or cy > 0.78):
+            content.remove(e)
+            anchors.append(e)
 
     units: list[_Unit] = []
-    for members in buckets.values():
-        members.sort(key=lambda e: e.get("z_index", 0))
-        if len(members) == 1:
-            e = members[0]
-            if e["type"] == "text" and not _rot(e):
-                units.append(_TextUnit(e))
-            elif e["type"] == "image":
-                units.append(_ImageUnit(e))
+    for members in _cluster(content, panels, True):
+        # A "group" spanning most of the canvas is a layout, not a widget: split it.
+        parts = [members]
+        if len(members) > 2:
+            x0 = min(m["x"] for m in members)
+            y0 = min(m["y"] for m in members)
+            x1 = max(m["x"] + m["width"] for m in members)
+            y1 = max(m["y"] + m["height"] for m in members)
+            if (x1 - x0) * (y1 - y0) > 0.45 * Ws * Hs:
+                giant = set()
+                for gid in {m.get("group_id") for m in members if m.get("group_id")}:
+                    gm = [m for m in members if m.get("group_id") == gid]
+                    gx0 = min(m["x"] for m in gm)
+                    gy0 = min(m["y"] for m in gm)
+                    gx1 = max(m["x"] + m["width"] for m in gm)
+                    gy1 = max(m["y"] + m["height"] for m in gm)
+                    if (gx1 - gx0) * (gy1 - gy0) > 0.45 * Ws * Hs:
+                        giant.add(gid)
+                parts = _cluster(members, panels, True, False, frozenset(giant))
+        for part in parts:
+            part.sort(key=lambda e: e.get("z_index", 0))
+            if len(part) == 1:
+                e = part[0]
+                if e["type"] == "text" and not _rot(e):
+                    units.append(_TextUnit(e))
+                elif e["type"] == "image":
+                    units.append(_ImageUnit(e))
+                else:
+                    units.append(_Cluster(part))
             else:
-                units.append(_Cluster(members))
-        else:
-            units.append(_Cluster(members))
+                units.append(_Cluster(part))
 
     # Hero picture: the biggest free image, if it is a meaningful share of the canvas.
     imgs = [u for u in units if isinstance(u, _ImageUnit)]
@@ -782,7 +916,8 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
         if hero.w * hero.h >= 0.04 * Ws * Hs:
             hero.is_hero = True
 
-    # Rows of >=3 similar chips become a flow row.
+    # Similar chips (badges, tags...) on one row, or in neatly stacked rows,
+    # become a flow row that can re-wrap as a grid.
     chips = sorted([u for u in units if isinstance(u, _Cluster) and len(u.els) >= 2
                     and not u.has_rot and u.w * u.h <= 0.08 * Ws * Hs], key=lambda u: u.cy)
     rows: list[list[_Cluster]] = []
@@ -790,8 +925,12 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
         if rows:
             r = rows[-1]
             ref_h = sorted(k.h for k in r)[len(r) // 2]
+            ref_w = sorted(k.w for k in r)[len(r) // 2]
             mean_cy = sum(k.cy for k in r) / len(r)
-            if abs(u.cy - mean_cy) <= 0.5 * max(u.h, ref_h) and 0.6 <= u.h / ref_h <= 1.67:
+            same_row = abs(u.cy - mean_cy) <= 0.5 * max(u.h, ref_h) and 0.6 <= u.h / max(ref_h, 1e-6) <= 1.67
+            next_row = (u.cy > mean_cy and u.cy - max(k.cy for k in r) <= 1.9 * max(u.h, ref_h)
+                        and 0.8 <= u.h / max(ref_h, 1e-6) <= 1.25 and 0.75 <= u.w / max(ref_w, 1e-6) <= 1.33)
+            if same_row or next_row:
                 r.append(u)
                 continue
         rows.append([u])
@@ -801,17 +940,93 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                 units.remove(u)
             units.append(_RowFlow(r))
 
+    # Big look-alike widgets (feature cards...) side by side also flow as a row/grid.
+    _link_siblings(units)
+    seen: set[int] = set()
+    for u in list(units):
+        g = u.sib
+        if not g or id(g) in seen or not isinstance(u, (_Cluster, _ImageUnit)):
+            continue
+        seen.add(id(g))
+        row = [m for m in g if isinstance(m, (_Cluster, _ImageUnit)) and not getattr(m, 'has_rot', False)
+               and not getattr(m, 'rot', 0) and m in units]
+        if len(row) >= 3:
+            for m in row:
+                units.remove(m)
+            units.append(_RowFlow(row))
     units.sort(key=lambda u: (u.cy, u.cx))
-    return bg, deco, lost, units
+    _link_siblings(units)
+    return bg, deco, lost + anchors, anchors, units
+
+
+def _scale_style(n: dict, k: float) -> dict:
+    for key in ("corner_radius", "stroke_width"):
+        if n.get(key):
+            n[key] = float(n[key]) * k
+    return n
+
+
+def _uniform(source: dict, target: dict) -> dict:
+    """Same aspect ratio (within ~2%): nothing to rearrange, just scale."""
+    Ws, Hs = source["canvas"]["width"], source["canvas"]["height"]
+    W, H = int(target["width"]), int(target["height"])
+    k = min(W / Ws, H / Hs)
+    ox, oy = (W - Ws * k) / 2, (H - Hs * k) / 2
+    out = []
+    for e in source["elements"]:
+        n = dict(e)
+        if _coverage(e, Ws, Hs) >= 0.85 and e["type"] in ("image", "shape") and not _rot(e):
+            n.update(x=0, y=0, width=W, height=H)
+            if n["type"] == "image" and n.get("fit") == "fill":
+                n["fit"] = "cover"
+        else:
+            n.update(x=ox + e["x"] * k, y=oy + e["y"] * k, width=e["width"] * k, height=e["height"] * k)
+            _scale_style(n, k)
+            if e["type"] == "text":
+                t = _Txt(e)
+                fs = max(1.0, math.floor(float(e["font_size"]) * k * 100) / 100)
+                if e.get("letter_spacing"):
+                    n["letter_spacing"] = float(e["letter_spacing"]) * k
+                fs, lines, th = t.fit(fs, n["width"], n["height"], 0.7 * fs)
+                n["font_size"] = fs
+                n["height"] = max(n["height"], th)
+        out.append(n)
+    return {"canvas": {"width": W, "height": H}, "elements": _sanitize(out, W, H)}
+
+
+def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
+    """A smaller source text must never end up bigger than a clearly larger one
+    (a long unbreakable headline word can force its font down)."""
+    texts = [u for u in units if isinstance(u, _TextUnit)]
+    for b in texts:
+        e = placed.get(b.el["id"])
+        if not e:
+            continue
+        cap = None
+        for a in texts:
+            if a is b or a.t.f < 1.3 * b.t.f:
+                continue
+            fa = placed.get(a.el["id"])
+            if fa:
+                c = fa["font_size"] * 0.95 * (b.t.f / a.t.f) ** 0.5
+                cap = c if cap is None else min(cap, c)
+        if cap is not None and e["font_size"] > cap:
+            fs, n, th = b.t.fit(cap, e["width"])
+            e["font_size"] = fs
+            e["height"] = th
+            if e.get("letter_spacing"):
+                e["letter_spacing"] = b.t.ls0 * fs / b.t.f
 
 
 def _resize(source: dict, target: dict) -> dict:
     Ws, Hs = int(source["canvas"]["width"]), int(source["canvas"]["height"])
     W, H = int(target["width"]), int(target["height"])
+    if abs(math.log((W / H) / (Ws / Hs))) < 0.02:
+        return _uniform(source, target)
     els = [dict(e) for e in source["elements"]]
-    bg, deco, lost, units = _build_units(els, Ws, Hs)
+    bg, deco, lost, anchors, units = _build_units(els, Ws, Hs)
     geo = _Geo(W, H, Ws, Hs)
-    s_cap = 1.1 * math.sqrt((W * H) / (Ws * Hs))
+    s_cap = 1.1 * max(math.sqrt((W * H) / (Ws * Hs)), 0.7 * max(W / Ws, H / Hs))
 
     out: dict[str, dict] = {}
     for e in bg:
@@ -822,21 +1037,26 @@ def _resize(source: dict, target: dict) -> dict:
         out[n["id"]] = n
 
     occ: list[tuple] = []
+    s_used = 0.5 * min(W / Ws, H / Hs)
     if units:
         res = _layout(units, geo, s_cap)
         if res is None:
             raise RuntimeError("no feasible layout")
-        placed, occ = res
+        placed, occ, s_used = res
         for e in placed:
             out[e["id"]] = e
+        _cap_hierarchy(units, out)
 
-    for e in _place_deco(deco + lost, (Ws, Hs), geo, occ):
+    anchor_ids = {a["id"] for a in anchors}
+    anchored = _place_deco(anchors, (Ws, Hs), geo, occ, kfix=max(s_used, 0.5 * min(W / Ws, H / Hs)))
+    for e in anchored:
+        out[e["id"]] = e
+        occ.append((e["x"], e["y"], e["width"], e["height"], 1.0))
+    rest = [e for e in deco + lost if e["id"] not in anchor_ids]
+    for e in _place_deco(rest, (Ws, Hs), geo, occ):
         out[e["id"]] = e
 
-    result = []
-    for e in els:
-        n = out[e["id"]]
-        result.append(n)
+    result = [out[e["id"]] for e in els]
     return {"canvas": {"width": W, "height": H}, "elements": _sanitize(result, W, H)}
 
 
@@ -844,15 +1064,24 @@ def _sanitize(elements: list[dict], W: int, H: int) -> list[dict]:
     res = []
     for e in elements:
         e = dict(e)
-        w = _clamp(float(e["width"]), 0.0, float(W))
-        h = _clamp(float(e["height"]), 0.0, float(H))
+        w, h = max(0.0, float(e["width"])), max(0.0, float(e["height"]))
+        if e["type"] != "text" and (w > W or h > H) and w > 0 and h > 0:
+            f = min(W / w, H / h)  # keep proportions when something is bigger than the canvas
+            cx, cy = float(e["x"]) + w / 2, float(e["y"]) + h / 2
+            w, h = w * f, h * f
+            e["x"], e["y"] = cx - w / 2, cy - h / 2
+        w, h = min(w, float(W)), min(h, float(H))
         x = _clamp(float(e["x"]), 0.0, W - w)
         y = _clamp(float(e["y"]), 0.0, H - h)
-        e.update(x=round(x, 2), y=round(y, 2), width=round(w, 2), height=round(h, 2))
         if e["type"] == "text":
-            e["font_size"] = round(max(1.0, float(e["font_size"])), 2)
+            w = min(float(W), math.ceil(w * 100) / 100)
+            h = min(float(H), math.ceil(h * 100) / 100)
+            x = _clamp(x, 0.0, W - w)
+            y = _clamp(y, 0.0, H - h)
+            e["font_size"] = max(1.0, math.floor(float(e["font_size"]) * 100) / 100)
             if e.get("letter_spacing"):
                 e["letter_spacing"] = round(float(e["letter_spacing"]), 3)
+        e.update(x=round(x, 2), y=round(y, 2), width=round(w, 2), height=round(h, 2))
         res.append(e)
     return res
 

@@ -1,0 +1,58 @@
+{
+ "task_id": "t09_unknown_font",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "font families not in brand kit",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 300,
+    "width": 900,
+    "height": 200,
+    "z_index": 16,
+    "content": "Fallback font headline text",
+    "font_family": "Arial",
+    "font_size": 64,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 560,
+    "width": 800,
+    "height": 120,
+    "z_index": 17,
+    "content": "Another family that is not in the brand kit",
+    "font_family": "Comic Sans MS",
+    "font_size": 32,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

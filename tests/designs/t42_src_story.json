@@ -1,0 +1,109 @@
+{
+ "task_id": "t42_src_story",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "story source -> landscape targets",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1920
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1920,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 380,
+    "y": 100,
+    "width": 320,
+    "height": 107,
+    "z_index": 232,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 190,
+    "y": 380,
+    "width": 700,
+    "height": 700,
+    "z_index": 233,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 1180,
+    "width": 900,
+    "height": 220,
+    "z_index": 234,
+    "content": "Tall story headline",
+    "font_family": "Solstice Serif",
+    "font_size": 100,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 1440,
+    "width": 800,
+    "height": 150,
+    "z_index": 235,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 290,
+    "y": 1680,
+    "width": 500,
+    "height": 110,
+    "z_index": 236,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 55.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 290,
+    "y": 1713.4,
+    "width": 500,
+    "height": 43.199999999999996,
+    "z_index": 237,
+    "content": "Swipe up",
+    "font_family": "Solstice Sans",
+    "font_size": 36,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1920
+ }
+}

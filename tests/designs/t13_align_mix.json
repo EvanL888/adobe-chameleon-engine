@@ -1,0 +1,86 @@
+{
+ "task_id": "t13_align_mix",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "left/center/right mixed",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "l",
+    "type": "text",
+    "x": 80,
+    "y": 200,
+    "width": 600,
+    "height": 150,
+    "z_index": 24,
+    "content": "Left aligned title",
+    "font_family": "Solstice Serif",
+    "font_size": 60,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "c",
+    "type": "text",
+    "x": 140,
+    "y": 450,
+    "width": 800,
+    "height": 150,
+    "z_index": 25,
+    "content": "Centered middle line of text",
+    "font_family": "Solstice Sans",
+    "font_size": 50,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "r",
+    "type": "text",
+    "x": 400,
+    "y": 700,
+    "width": 600,
+    "height": 150,
+    "z_index": 26,
+    "content": "Right aligned closing note",
+    "font_family": "Solstice Sans",
+    "font_size": 44,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "right"
+   },
+   {
+    "id": "l2",
+    "type": "text",
+    "x": 80,
+    "y": 900,
+    "width": 700,
+    "height": 200,
+    "z_index": 27,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

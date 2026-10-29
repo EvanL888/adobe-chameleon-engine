@@ -1,0 +1,69 @@
+{
+ "task_id": "t29_text_over_photo",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "text sitting on top of a picture",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "photo",
+    "type": "image",
+    "x": 100,
+    "y": 100,
+    "width": 880,
+    "height": 880,
+    "z_index": 2,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "cap",
+    "type": "text",
+    "x": 200,
+    "y": 700,
+    "width": 680,
+    "height": 120,
+    "z_index": 3,
+    "content": "Caption on the picture",
+    "font_family": "Solstice Serif",
+    "font_size": 56,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "tag",
+    "type": "text",
+    "x": 140,
+    "y": 1010,
+    "width": 800,
+    "height": 50,
+    "z_index": 69,
+    "content": "outside caption",
+    "font_family": "Solstice Sans",
+    "font_size": 26,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

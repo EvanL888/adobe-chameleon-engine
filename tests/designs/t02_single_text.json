@@ -1,0 +1,44 @@
+{
+ "task_id": "t02_single_text",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "one text element",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 440,
+    "width": 800,
+    "height": 200,
+    "z_index": 1,
+    "content": "Chase the Light",
+    "font_family": "Solstice Serif",
+    "font_size": 90,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

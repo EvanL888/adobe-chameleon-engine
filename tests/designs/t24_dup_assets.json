@@ -1,0 +1,77 @@
+{
+ "task_id": "t24_dup_assets",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "same asset_id reused",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "p1",
+    "type": "image",
+    "x": 80,
+    "y": 200,
+    "width": 300,
+    "height": 300,
+    "z_index": 55,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p2",
+    "type": "image",
+    "x": 390,
+    "y": 200,
+    "width": 300,
+    "height": 300,
+    "z_index": 56,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p3",
+    "type": "image",
+    "x": 700,
+    "y": 200,
+    "width": 300,
+    "height": 300,
+    "z_index": 57,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 600,
+    "width": 900,
+    "height": 150,
+    "z_index": 58,
+    "content": "Same asset three times",
+    "font_family": "Solstice Serif",
+    "font_size": 64,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

@@ -1,0 +1,58 @@
+{
+ "task_id": "t07_newlines",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "explicit newlines, left/right align",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "poem",
+    "type": "text",
+    "x": 140,
+    "y": 300,
+    "width": 800,
+    "height": 500,
+    "z_index": 11,
+    "content": "Roses are red\nViolets are blue\n\nSugar is sweet\nAnd so are you",
+    "font_family": "Solstice Serif",
+    "font_size": 52,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "line_height": 1.5
+   },
+   {
+    "id": "by",
+    "type": "text",
+    "x": 140,
+    "y": 900,
+    "width": 800,
+    "height": 60,
+    "z_index": 12,
+    "content": "— anonymous",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "right"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

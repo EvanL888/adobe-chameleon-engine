@@ -1,0 +1,56 @@
+{
+ "task_id": "t25_bg_variants",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "bg with fit=fill and a full-bleed translucent overlay",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "fill"
+   },
+   {
+    "id": "scrim",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(0,0,0,1)",
+    "opacity": 0.45
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 500,
+    "width": 900,
+    "height": 160,
+    "z_index": 59,
+    "content": "Fill bg + full scrim",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

@@ -1,0 +1,72 @@
+{
+ "task_id": "t10_style_runs",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "style runs and italics",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 300,
+    "width": 900,
+    "height": 200,
+    "z_index": 18,
+    "content": "Chase the Light today",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "style_runs": [
+     {
+      "start": 6,
+      "end": 9,
+      "color": "rgba(240,178,66,1)",
+      "font_style": "italic"
+     },
+     {
+      "start": 10,
+      "end": 15,
+      "font_weight": "regular"
+     }
+    ]
+   },
+   {
+    "id": "i",
+    "type": "text",
+    "x": 140,
+    "y": 560,
+    "width": 800,
+    "height": 100,
+    "z_index": 19,
+    "content": "Italic subheading line here",
+    "font_family": "Solstice Sans",
+    "font_size": 36,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_style": "italic"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

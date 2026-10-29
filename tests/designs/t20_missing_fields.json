@@ -1,0 +1,52 @@
+{
+ "task_id": "t20_missing_fields",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "no z_index / opacity / align / weight / group_id",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 500,
+    "width": 900,
+    "height": 160,
+    "content": "Bare minimum fields",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 700,
+    "width": 800,
+    "height": 100,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

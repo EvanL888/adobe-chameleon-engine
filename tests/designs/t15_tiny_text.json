@@ -1,0 +1,72 @@
+{
+ "task_id": "t15_tiny_text",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "very small source text",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "a",
+    "type": "text",
+    "x": 60,
+    "y": 200,
+    "width": 960,
+    "height": 40,
+    "z_index": 30,
+    "content": "All of this copy is only eight pixels tall All of this copy is only eight pixels tall All of this copy is only eight pixels tall ",
+    "font_family": "Solstice Sans",
+    "font_size": 8,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "b",
+    "type": "text",
+    "x": 60,
+    "y": 300,
+    "width": 960,
+    "height": 40,
+    "z_index": 31,
+    "content": "Second micro line Second micro line Second micro line Second micro line Second micro line Second micro line ",
+    "font_family": "Solstice Sans",
+    "font_size": 9,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 600,
+    "width": 800,
+    "height": 100,
+    "z_index": 32,
+    "content": "Headline",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

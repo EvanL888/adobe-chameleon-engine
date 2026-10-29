@@ -1,0 +1,29 @@
+{
+ "task_id": "t04_single_image",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "just one picture",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "p",
+    "type": "image",
+    "x": 190,
+    "y": 190,
+    "width": 700,
+    "height": 700,
+    "z_index": 5,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

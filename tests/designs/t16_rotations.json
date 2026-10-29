@@ -1,0 +1,99 @@
+{
+ "task_id": "t16_rotations",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "rotated images, text, and a rotated group",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "r90",
+    "type": "image",
+    "x": 100,
+    "y": 100,
+    "width": 300,
+    "height": 100,
+    "z_index": 33,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain",
+    "rotation": 90
+   },
+   {
+    "id": "r45",
+    "type": "image",
+    "x": 600,
+    "y": 100,
+    "width": 300,
+    "height": 300,
+    "z_index": 34,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain",
+    "rotation": -45
+   },
+   {
+    "id": "rt",
+    "type": "text",
+    "x": 200,
+    "y": 600,
+    "width": 700,
+    "height": 100,
+    "z_index": 35,
+    "content": "Tilted headline",
+    "font_family": "Solstice Serif",
+    "font_size": 60,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "rotation": 15,
+    "font_weight": "bold"
+   },
+   {
+    "id": "rb",
+    "type": "shape",
+    "x": 300,
+    "y": 900,
+    "width": 400,
+    "height": 80,
+    "z_index": 36,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(220,60,50,1)",
+    "rotation": -30,
+    "group_id": "rib"
+   },
+   {
+    "id": "rl",
+    "type": "text",
+    "x": 300,
+    "y": 920,
+    "width": 400,
+    "height": 40,
+    "z_index": 37,
+    "content": "SALE TAG",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "rotation": -30,
+    "group_id": "rib"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

@@ -1,0 +1,66 @@
+{
+ "task_id": "t22_missing_assets",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "large missing hero + missing corner asset",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "m_hero",
+    "type": "image",
+    "x": 240,
+    "y": 200,
+    "width": 600,
+    "height": 600,
+    "z_index": 51,
+    "asset_id": "nope_hero.png",
+    "fit": "contain"
+   },
+   {
+    "id": "m_corner",
+    "type": "image",
+    "x": 880,
+    "y": 1150,
+    "width": 160,
+    "height": 120,
+    "z_index": 52,
+    "asset_id": "nope_corner.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 850,
+    "width": 900,
+    "height": 160,
+    "z_index": 53,
+    "content": "Hero asset is missing",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

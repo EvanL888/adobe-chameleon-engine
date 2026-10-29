@@ -1,0 +1,55 @@
+{
+ "task_id": "t21_same_everything",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "target == source size",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 380,
+    "y": 60,
+    "width": 320,
+    "height": 107,
+    "z_index": 49,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 500,
+    "width": 900,
+    "height": 150,
+    "z_index": 50,
+    "content": "Identity resize",
+    "font_family": "Solstice Serif",
+    "font_size": 80,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

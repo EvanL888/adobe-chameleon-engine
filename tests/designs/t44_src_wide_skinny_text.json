@@ -1,0 +1,58 @@
+{
+ "task_id": "t44_src_wide_skinny_text",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "text-only wide source",
+ "source": {
+  "canvas": {
+   "width": 1200,
+   "height": 300
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1200,
+    "height": 300,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 40,
+    "y": 40,
+    "width": 1120,
+    "height": 100,
+    "z_index": 242,
+    "content": "One long wide single line headline that spans the banner nicely",
+    "font_family": "Solstice Serif",
+    "font_size": 44,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 40,
+    "y": 170,
+    "width": 1120,
+    "height": 80,
+    "z_index": 243,
+    "content": "And a single wide supporting line below it",
+    "font_family": "Solstice Sans",
+    "font_size": 26,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1200,
+  "height": 300
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "task_id": "t36_many_images",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "12 pictures in a grid",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 140,
+    "y": 40,
+    "width": 800,
+    "height": 100,
+    "z_index": 130,
+    "content": "Gallery",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "im0",
+    "type": "image",
+    "x": 60,
+    "y": 200,
+    "width": 220,
+    "height": 220,
+    "z_index": 131,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im1",
+    "type": "image",
+    "x": 305,
+    "y": 200,
+    "width": 220,
+    "height": 220,
+    "z_index": 132,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im2",
+    "type": "image",
+    "x": 550,
+    "y": 200,
+    "width": 220,
+    "height": 220,
+    "z_index": 133,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im3",
+    "type": "image",
+    "x": 795,
+    "y": 200,
+    "width": 220,
+    "height": 220,
+    "z_index": 134,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im4",
+    "type": "image",
+    "x": 60,
+    "y": 445,
+    "width": 220,
+    "height": 220,
+    "z_index": 135,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im5",
+    "type": "image",
+    "x": 305,
+    "y": 445,
+    "width": 220,
+    "height": 220,
+    "z_index": 136,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im6",
+    "type": "image",
+    "x": 550,
+    "y": 445,
+    "width": 220,
+    "height": 220,
+    "z_index": 137,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im7",
+    "type": "image",
+    "x": 795,
+    "y": 445,
+    "width": 220,
+    "height": 220,
+    "z_index": 138,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im8",
+    "type": "image",
+    "x": 60,
+    "y": 690,
+    "width": 220,
+    "height": 220,
+    "z_index": 139,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im9",
+    "type": "image",
+    "x": 305,
+    "y": 690,
+    "width": 220,
+    "height": 220,
+    "z_index": 140,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im10",
+    "type": "image",
+    "x": 550,
+    "y": 690,
+    "width": 220,
+    "height": 220,
+    "z_index": 141,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "im11",
+    "type": "image",
+    "x": 795,
+    "y": 690,
+    "width": 220,
+    "height": 220,
+    "z_index": 142,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

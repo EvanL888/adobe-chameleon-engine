@@ -1,0 +1,60 @@
+{
+ "task_id": "t12_max_lines",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "max_lines present",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 300,
+    "width": 900,
+    "height": 160,
+    "z_index": 22,
+    "content": "A headline that insists on at most two lines no matter what happens next",
+    "font_family": "Solstice Serif",
+    "font_size": 54,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "max_lines": 2
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 560,
+    "width": 800,
+    "height": 120,
+    "z_index": 23,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "max_lines": 3
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

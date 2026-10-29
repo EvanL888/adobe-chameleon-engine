@@ -1,0 +1,99 @@
+{
+ "task_id": "t27_panel_card",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "opaque panel behind text, ungrouped",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "panel",
+    "type": "shape",
+    "x": 140,
+    "y": 300,
+    "width": 800,
+    "height": 700,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "corner_radius": 40
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 190,
+    "y": 360,
+    "width": 700,
+    "height": 160,
+    "z_index": 62,
+    "content": "Card headline",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "b",
+    "type": "text",
+    "x": 190,
+    "y": 560,
+    "width": 700,
+    "height": 300,
+    "z_index": 63,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 32,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 340,
+    "y": 880,
+    "width": 400,
+    "height": 80,
+    "z_index": 64,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 40.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 340,
+    "y": 906.8,
+    "width": 400,
+    "height": 26.4,
+    "z_index": 65,
+    "content": "Buy now",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

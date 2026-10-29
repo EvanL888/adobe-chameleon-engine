@@ -1,0 +1,58 @@
+{
+ "task_id": "t14_huge_font",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "enormous headline font vs tiny caption",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 40,
+    "y": 200,
+    "width": 1000,
+    "height": 400,
+    "z_index": 28,
+    "content": "BOOM",
+    "font_family": "Solstice Serif",
+    "font_size": 330,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 750,
+    "width": 800,
+    "height": 100,
+    "z_index": 29,
+    "content": "tiny caption",
+    "font_family": "Solstice Sans",
+    "font_size": 26,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

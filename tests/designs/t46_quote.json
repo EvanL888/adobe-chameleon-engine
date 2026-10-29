@@ -1,0 +1,58 @@
+{
+ "task_id": "t46_quote",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "long quote + attribution",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "q",
+    "type": "text",
+    "x": 90,
+    "y": 280,
+    "width": 900,
+    "height": 500,
+    "z_index": 244,
+    "content": "“Design is not just what it looks like and feels like. Design is how it works.”",
+    "font_family": "Solstice Serif",
+    "font_size": 58,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_style": "italic"
+   },
+   {
+    "id": "a",
+    "type": "text",
+    "x": 90,
+    "y": 900,
+    "width": 900,
+    "height": 60,
+    "z_index": 245,
+    "content": "— someone wise",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "right"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

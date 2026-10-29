@@ -1,0 +1,226 @@
+{
+ "task_id": "t38_deco_heavy",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "14 decorative shapes",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "d0",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 80,
+    "height": 80,
+    "z_index": 203,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.08
+   },
+   {
+    "id": "d1",
+    "type": "shape",
+    "x": 173,
+    "y": 331,
+    "width": 140,
+    "height": 140,
+    "z_index": 204,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.1
+   },
+   {
+    "id": "d2",
+    "type": "shape",
+    "x": 346,
+    "y": 662,
+    "width": 200,
+    "height": 200,
+    "z_index": 205,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.12
+   },
+   {
+    "id": "d3",
+    "type": "shape",
+    "x": 519,
+    "y": 993,
+    "width": 260,
+    "height": 260,
+    "z_index": 206,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.14
+   },
+   {
+    "id": "d4",
+    "type": "shape",
+    "x": 692,
+    "y": 74,
+    "width": 80,
+    "height": 80,
+    "z_index": 207,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.16
+   },
+   {
+    "id": "d5",
+    "type": "shape",
+    "x": 865,
+    "y": 405,
+    "width": 140,
+    "height": 140,
+    "z_index": 208,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.08
+   },
+   {
+    "id": "d6",
+    "type": "shape",
+    "x": 38,
+    "y": 736,
+    "width": 200,
+    "height": 200,
+    "z_index": 209,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.1
+   },
+   {
+    "id": "d7",
+    "type": "shape",
+    "x": 211,
+    "y": 1067,
+    "width": 260,
+    "height": 260,
+    "z_index": 210,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.12
+   },
+   {
+    "id": "d8",
+    "type": "shape",
+    "x": 384,
+    "y": 148,
+    "width": 80,
+    "height": 80,
+    "z_index": 211,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.14
+   },
+   {
+    "id": "d9",
+    "type": "shape",
+    "x": 557,
+    "y": 479,
+    "width": 140,
+    "height": 140,
+    "z_index": 212,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.16
+   },
+   {
+    "id": "d10",
+    "type": "shape",
+    "x": 730,
+    "y": 810,
+    "width": 200,
+    "height": 200,
+    "z_index": 213,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.08
+   },
+   {
+    "id": "d11",
+    "type": "shape",
+    "x": 903,
+    "y": 1141,
+    "width": 260,
+    "height": 260,
+    "z_index": 214,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.1
+   },
+   {
+    "id": "d12",
+    "type": "shape",
+    "x": 76,
+    "y": 222,
+    "width": 80,
+    "height": 80,
+    "z_index": 215,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.12
+   },
+   {
+    "id": "d13",
+    "type": "shape",
+    "x": 249,
+    "y": 553,
+    "width": 140,
+    "height": 140,
+    "z_index": 216,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(255,255,255,1)",
+    "opacity": 0.14
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 500,
+    "width": 900,
+    "height": 160,
+    "z_index": 217,
+    "content": "Lots of decoration",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 700,
+    "width": 800,
+    "height": 120,
+    "z_index": 218,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}
