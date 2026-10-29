@@ -1,0 +1,109 @@
+{
+ "task_id": "t58_small_source",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "a 300x250 source scaled UP to posters (native caps, growth)",
+ "source": {
+  "canvas": {
+   "width": 300,
+   "height": 250
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 300,
+    "height": 250,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 100,
+    "y": 10,
+    "width": 100,
+    "height": 33,
+    "z_index": 314,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 110,
+    "y": 50,
+    "width": 80,
+    "height": 80,
+    "z_index": 315,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 15,
+    "y": 140,
+    "width": 270,
+    "height": 40,
+    "z_index": 316,
+    "content": "Chase the Light",
+    "font_family": "Solstice Serif",
+    "font_size": 22,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 20,
+    "y": 182,
+    "width": 260,
+    "height": 24,
+    "z_index": 317,
+    "content": "Botanical sparkling infusions",
+    "font_family": "Solstice Sans",
+    "font_size": 11,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 90,
+    "y": 212,
+    "width": 120,
+    "height": 28,
+    "z_index": 318,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 14.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 90,
+    "y": 219.4,
+    "width": 120,
+    "height": 13.2,
+    "z_index": 319,
+    "content": "Shop now",
+    "font_family": "Solstice Sans",
+    "font_size": 11,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 300,
+  "height": 250
+ }
+}

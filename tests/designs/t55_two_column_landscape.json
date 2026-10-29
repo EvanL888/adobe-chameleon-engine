@@ -1,0 +1,109 @@
+{
+ "task_id": "t55_two_column_landscape",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "text column left, product right (landscape -> story must stack)",
+ "source": {
+  "canvas": {
+   "width": 1920,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1920,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 120,
+    "y": 80,
+    "width": 300,
+    "height": 100,
+    "z_index": 288,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 120,
+    "y": 300,
+    "width": 760,
+    "height": 260,
+    "z_index": 289,
+    "content": "Chase the Light this summer",
+    "font_family": "Solstice Serif",
+    "font_size": 96,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 120,
+    "y": 600,
+    "width": 700,
+    "height": 160,
+    "z_index": 290,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 32,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 120,
+    "y": 820,
+    "width": 360,
+    "height": 90,
+    "z_index": 291,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 120,
+    "y": 847.0,
+    "width": 360,
+    "height": 36.0,
+    "z_index": 292,
+    "content": "Shop now",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 1100,
+    "y": 120,
+    "width": 720,
+    "height": 840,
+    "z_index": 293,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1920,
+  "height": 1080
+ }
+}

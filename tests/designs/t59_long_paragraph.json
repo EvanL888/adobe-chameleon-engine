@@ -1,0 +1,88 @@
+{
+ "task_id": "t59_long_paragraph",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "600+ character body copy",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 120,
+    "width": 900,
+    "height": 150,
+    "z_index": 320,
+    "content": "Our story",
+    "font_family": "Solstice Serif",
+    "font_size": 84,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "body",
+    "type": "text",
+    "x": 90,
+    "y": 320,
+    "width": 900,
+    "height": 760,
+    "z_index": 321,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour. Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour. Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour. Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour. Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "line_height": 1.5
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 340,
+    "y": 1160,
+    "width": 400,
+    "height": 90,
+    "z_index": 322,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 340,
+    "y": 1188.2,
+    "width": 400,
+    "height": 33.6,
+    "z_index": 323,
+    "content": "Read the full story",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

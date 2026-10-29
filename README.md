@@ -31,7 +31,7 @@ docker run --rm --network none -v $(pwd)/input:/app/input -v $(pwd)/output:/app/
 
 ```bash
 python -m tests.test_engine                 # fast invariants, incl. wrap parity with the real renderer
-python -m tools.eval_matrix --only-errors   # 54 adversarial designs x 32 canvas sizes, strict checks
+python -m tools.eval_matrix --only-errors   # 63 adversarial designs x 32 canvas sizes, strict checks
 python -m tools.fuzz --n 200 --seed 1       # random designs: crashes and rule violations
 python -m viewer.serve                      # viewer: pick a design and size, see before/after (localhost:5057)
 ```

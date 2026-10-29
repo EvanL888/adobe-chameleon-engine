@@ -281,9 +281,24 @@ def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
 
-def _floor_px(f: float, ff: float) -> float:
-    """Smallest font size we are willing to render for a source size f."""
-    return ff * max(6.0, 0.4 * f)
+def _pr(prio: float, s: float) -> float:
+    """Priority factor: below s~0.5 (tight canvas) minor pieces shrink faster
+    than the headline, down to `prio` of the uniform scale."""
+    return 1.0 - (1.0 - prio) * _clamp((0.5 - s) / 0.25, 0.0, 1.0)
+
+
+def _floor_px(f: float, ff: tuple) -> float:
+    """Smallest font size we are willing to render for a source size f.
+    ff = (absolute px floor, fraction of the source size). The absolute floor
+    keeps small print readable; the fraction keeps the hierarchy from collapsing.
+    The search relaxes the fraction first and the absolute floor last."""
+    return max(ff[0], ff[1] * f)
+
+
+def _legib(minfs: float) -> float:
+    """Score factor for the smallest rendered font: below ~8px text stops being
+    readable in the rendered PNG, so this falls off quickly."""
+    return min(1.0, minfs / 8.0) ** 1.5
 
 
 _native_cache: dict[str, Any] = {}
@@ -301,6 +316,41 @@ def _native_size(asset_id: Any):
             size = None
         _native_cache[key] = size
     return _native_cache[key]
+
+
+_ink_cache: dict[str, Any] = {}
+
+
+def _ink_box(e: dict) -> tuple[float, float, float, float]:
+    """The part of an image element that actually has pixels: for a contain-fit
+    asset with transparent padding (bottle, wordmark) this is its alpha bounding
+    box, mapped into the element's box. Anything else is the box itself."""
+    b = _box(e)
+    if e.get("type") != "image" or e.get("fit") not in (None, "contain") or _rot(e):
+        return b
+    key = str(e.get("asset_id"))
+    if key not in _ink_cache:
+        frac = None
+        try:
+            from PIL import Image
+            with Image.open(_ASSET_DIR / key) as im:
+                if im.mode == "RGBA":
+                    bb, (iw, ih) = im.split()[-1].getbbox(), im.size
+                    if bb:
+                        frac = (bb[0] / iw, bb[1] / ih, (bb[2] - bb[0]) / iw, (bb[3] - bb[1]) / ih)
+        except Exception:
+            frac = None
+        _ink_cache[key] = frac
+    frac = _ink_cache[key]
+    if not frac or b[2] <= 0 or b[3] <= 0:
+        return b
+    size = _native_size(key)
+    if not size:
+        return b
+    k = min(b[2] / size[0], b[3] / size[1])  # contain: image centred in the box
+    iw, ih = size[0] * k, size[1] * k
+    ox, oy = b[0] + (b[2] - iw) / 2, b[1] + (b[3] - ih) / 2
+    return (ox + frac[0] * iw, oy + frac[1] * ih, frac[2] * iw, frac[3] * ih)
 
 
 def _native_cap(el: dict):
@@ -326,7 +376,7 @@ class _Unit:
 
     def __init__(self):
         self.boost = 1.0
-        self.ff = 1.0
+        self.ff = (6.0, 0.4)
         self.is_hero = False
         self.min_w = 0.0    # legibility floor (px) for logo-like pictures
         self.prio = 1.0     # <1: minor text that yields space to the headline when tight
@@ -361,8 +411,8 @@ class _ImageUnit(_Unit):
         self.g_native = _native_cap(el)
 
     def measure(self, s: float, cw: float) -> dict:
-        pr = 1.0 - (1.0 - self.prio) * _clamp((0.4 - s) / 0.2, 0.0, 1.0)  # pictures yield to text when tight
-        g = max(s * self.boost * pr, self.min_w * self.ff / max(self.fw, 1e-6))
+        pr = _pr(self.prio, s)  # pictures yield to text when tight; the hero grows back if room is left
+        g = max(s * self.boost * pr, self.min_w * min(1.0, self.ff[0] / 6.0) / max(self.fw, 1e-6))
         g = min(g, cw / max(self.fw, 1e-6))
         if self.g_native:
             g = min(g, self.g_native)
@@ -374,7 +424,8 @@ class _ImageUnit(_Unit):
     def min_src_font(self) -> float:
         return 1e9
 
-    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None) -> list[dict]:
+    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None,
+             hchip: float | None = None) -> list[dict]:
         e = dict(self.el)
         w, h = float(self.el["width"]) * g, float(self.el["height"]) * g
         e.update(x=ox + self.fw * g / 2 - w / 2, y=oy + self.fh * g / 2 - h / 2, width=w, height=h)
@@ -404,11 +455,12 @@ class _TextUnit(_Unit):
     def measure(self, s: float, cw: float) -> dict:
         # When everything must shrink hard, minor copy (legal line, small print)
         # gives up more so the headline and call to action stay readable.
-        pr = 1.0 - (1.0 - self.prio) * _clamp((0.4 - s) / 0.2, 0.0, 1.0)
-        fs = max(self.t.f * s * self.boost * pr, _floor_px(self.t.f, self.ff) * pr)
+        pr = _pr(self.prio, s)
+        fs = max(self.t.f * s * self.boost * pr, _floor_px(self.t.f, self.ff))  # the floor never yields
         maxw = min(cw, max(self.w * s * 1.6, 0.7 * cw))
         fs, n, th = self.t.fit(fs, maxw)
-        return {"w": maxw, "h": th, "fs": fs, "minfs": fs, "n": n, "chars": len(self.t.text.strip())}
+        return {"w": maxw, "h": th, "fs": fs, "minfs": fs, "n": n, "chars": len(self.t.text.strip()),
+                "big": (self.t.f, fs)}
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
         e = dict(self.el)
@@ -456,7 +508,7 @@ class _Cluster(_Unit):
         # A pill/badge: one rectangle with one centred single-line label. Its
         # shape can be tightened to the label, so it stays legible in narrow spaces.
         self.chip = False
-        self.wmin = self.w
+        self.wmin, self.hmin = self.w, self.h
         shapes = [e for e in els if e["type"] == "shape"]
         texts = [e for e in els if e["type"] == "text"]
         if len(els) == 2 and len(shapes) == 1 and len(texts) == 1 and not self.has_rot \
@@ -468,7 +520,9 @@ class _Cluster(_Unit):
             if n1 == 1 and sx_ <= tx_ + tw_ / 2 <= sx_ + sw_ and sy_ <= ty_ + th_ / 2 <= sy_ + sh_:
                 pad = max(0.0, (sw_ - one_line) / 2)
                 self.wmin = min(self.w, one_line + 2 * min(pad, 0.5 * sh_) + 1.0)
-                self.chip = self.wmin < self.w - 1.0
+                pad_v = max(0.0, (sh_ - 1.2 * t.f) / 2)
+                self.hmin = min(self.h, 1.27 * t.f + 2 * min(pad_v, 0.25 * t.f) + 1.0)
+                self.chip = self.wmin < self.w - 1.0 or self.hmin < self.h - 1.0
 
     def has_text(self) -> bool:
         return bool(self.txt)
@@ -499,23 +553,38 @@ class _Cluster(_Unit):
             return self.wmin * g
         return self.w * g if cw is None else max(self.wmin * g, min(self.w * g, cw))
 
+    def tight_at(self, s: float) -> bool:
+        """A pill whose label is pinned at the legibility floor is in a cramped
+        layout: its padding gives way (both directions) so the label can stay big."""
+        return self.chip and self.floor_g() > s * self.boost + 1e-9
+
+    def height_at(self, g: float, tight: bool = False) -> float:
+        return (self.hmin if tight else self.h) * g
+
     def measure(self, s: float, cw: float) -> dict:
         g = self.scale_for(s, cw)
-        return {"w": self.width_at(g, cw), "h": self.h * g, "g": g, "minfs": g * self.min_src_font()}
+        tight = self.tight_at(s)
+        return {"w": self.width_at(g, cw, tight), "h": self.height_at(g, tight), "g": g,
+                "minfs": g * self.min_src_font(), "tight": tight,
+                "big": (max(t.f for t in self.txt.values()), g * max(t.f for t in self.txt.values())) if self.txt else None}
 
-    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None) -> list[dict]:
+    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None,
+             hchip: float | None = None) -> list[dict]:
         shapes = [e for e in self.els if e["type"] == "shape"]
-        hx = 1.0
+        hx = hy = 1.0
         if self.chip and wchip is not None and self.w * g > 0:
             hx = max(0.05, min(1.0, wchip / (self.w * g)))
+        if self.chip and hchip is not None and self.h * g > 0:
+            hy = max(0.05, min(1.0, hchip / (self.h * g)))
         out = []
         for e in self.els:
             x, y, w, h = _box(e)
             ncx = ox + (x + w / 2 - self.x0) * g * hx
-            ncy = oy + (y + h / 2 - self.y0) * g
-            nw, nh = w * g * hx, h * g
+            ncy = oy + (y + h / 2 - self.y0) * g * hy
+            nw, nh = w * g * hx, h * g * hy
             n = dict(e)
             if e["type"] == "text":
+                nh = h * g  # a tightened pill moves its label but never squashes it
                 t = self.txt[e["id"]]
                 fs0 = t.f * g
                 fs, lines, th = t.fit(fs0, nw, nh * 1.08 if self.src_fit[e["id"]] else None,
@@ -526,11 +595,12 @@ class _Cluster(_Unit):
                 top = ncy - nh / 2
                 # Label sitting centred on a shape (button, badge): centre the
                 # text block on the shape so it does not hug the top edge.
-                for sh in shapes:
+                for sh in shapes if len(self.txt) == 1 else []:
                     sx, sy, sw, shh = _box(sh)
                     if (sx <= x + w / 2 <= sx + sw and sy <= y + h / 2 <= sy + shh
+                            and shh <= 3.0 * h  # a label-sized shape, not a panel
                             and abs((y + h / 2) - (sy + shh / 2)) < 0.25 * shh):
-                        top = (oy + (sy + shh / 2 - self.y0) * g) - th / 2
+                        top = (oy + (sy + shh / 2 - self.y0) * g * hy) - th / 2
                         break
                 nh = max(th, min(nh, th * 1.0)) if th > nh or top != ncy - nh / 2 else nh
                 n.update(x=ncx - nw / 2, y=top, width=nw, height=nh)
@@ -541,7 +611,71 @@ class _Cluster(_Unit):
         return out
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
-        return self.emit(m["g"], (x0 + x1) / 2 - m["w"] / 2, top, m["w"] if self.chip else None)
+        return self.emit(m["g"], (x0 + x1) / 2 - m["w"] / 2, top, m["w"] if self.chip else None,
+                         m["h"] if self.chip else None)
+
+
+def _beside(img: dict, txt: dict, canvas_area: float) -> bool:
+    """A small picture with a text line starting right beside it (icon + label)."""
+    if img["type"] != "image" or txt["type"] != "text" or _rot(img) or _rot(txt):
+        return False
+    if _area(_box(img)) > 0.03 * canvas_area:
+        return False
+    ax, ay, aw, ah = _box(img)
+    bx, by, bw, bh = _box(txt)
+    beside = 0 <= bx - (ax + aw) <= max(0.6 * aw, 0.03 * math.sqrt(canvas_area))
+    return beside and ay - 0.25 * ah <= by + bh / 2 <= ay + 1.25 * ah and bh <= 2.5 * ah
+
+
+class _IconLabel(_Unit):
+    """A small picture with its label beside it: the icon scales, the label
+    re-wraps in whatever width is left, both stay vertically centred."""
+    kind = "iconlabel"
+
+    def __init__(self, img: dict, txt: dict):
+        super().__init__()
+        self.img, self.el = img, txt
+        self.t = _Txt(txt)
+        ix, iy, iw, ih = _box(img)
+        tx, ty, tw, th = _box(txt)
+        self.iw, self.ih = iw, ih
+        self.gap_src = max(2.0, tx - (ix + iw))
+        self.x0, self.y0 = ix, min(iy, ty)
+        self.w, self.h = tx + tw - ix, max(iy + ih, ty + th) - self.y0
+        self.g_native = _native_cap(img)
+
+    def has_text(self) -> bool:
+        return True
+
+    def floor_g(self) -> float:
+        return _floor_px(self.t.f, self.ff) / self.t.f
+
+    def min_src_font(self) -> float:
+        return self.t.f
+
+    def measure(self, s: float, cw: float) -> dict:
+        g = max(s * self.boost, self.floor_g())
+        if self.g_native:
+            g = min(g, self.g_native)
+        g = min(g, 0.4 * cw / max(self.iw, 1e-6))  # the icon never takes more than 40% of the row
+        fs = max(self.t.f * s * self.boost, _floor_px(self.t.f, self.ff))
+        gap = self.gap_src * g
+        tw = max(1.0, cw - self.iw * g - gap)
+        fs, n, th = self.t.fit(fs, tw)
+        return {"w": cw, "h": max(self.ih * g, th), "g": g, "fs": fs, "n": n, "th": th, "tw": tw,
+                "minfs": fs, "big": (self.t.f, fs)}
+
+    def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
+        g = m["g"]
+        iw, ih = self.iw * g, self.ih * g
+        icon = dict(self.img)
+        icon.update(x=x0, y=top + (m["h"] - ih) / 2, width=iw, height=ih)
+        lab = dict(self.el)
+        lab.update(x=x0 + iw + self.gap_src * g, y=top + (m["h"] - m["th"]) / 2, width=m["tw"], height=m["th"],
+                   font_size=m["fs"])
+        if lab.get("letter_spacing"):
+            lab["letter_spacing"] = float(lab["letter_spacing"]) * m["fs"] / self.t.f
+        return [icon, lab]
 
 
 class _RowFlow(_Unit):
@@ -564,6 +698,10 @@ class _RowFlow(_Unit):
     @staticmethod
     def _kw(k, g: float, tight: bool) -> float:
         return (k.wmin if tight else k.w) * g
+
+    @staticmethod
+    def _kh(k, g: float, tight: bool) -> float:
+        return (getattr(k, "hmin", k.h) if tight else k.h) * g
 
     def _flow(self, g: float, cw: float, tight: bool) -> list[list]:
         gap = self.gap_src * g
@@ -594,24 +732,27 @@ class _RowFlow(_Unit):
             too_wide = any(sum(self._kw(k, g, False) for k in ln) + gap0 * (len(ln) - 1) > cw + 0.01
                            for ln in lines)
             t_lines = self._flow(g, cw, True)
-            if too_wide or len(t_lines) < len(lines):
+            pinned = any(k.tight_at(s) for k in self.kids if isinstance(k, _Cluster))
+            if too_wide or pinned or len(t_lines) < len(lines):
                 lines, tight = t_lines, True
         gap = self.gap_src * g
-        h = sum(max(k.h for k in ln) * g for ln in lines) + gap * 0.8 * (len(lines) - 1)
+        h = sum(max(self._kh(k, g, tight) for k in ln) for ln in lines) + gap * 0.8 * (len(lines) - 1)
         w = max(sum(self._kw(k, g, tight) for k in ln) + gap * (len(ln) - 1) for ln in lines)
         return {"w": w, "h": h, "g": g, "lines": lines, "tight": tight,
-                "minfs": g * min(k.min_src_font() for k in self.kids)}
+                "minfs": g * min(k.min_src_font() for k in self.kids),
+                "big": max((k.measure(s, cw).get("big") for k in self.kids if isinstance(k, _Cluster)),
+                           key=lambda b: b[0] if b else 0.0, default=None)}
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
         g, gap, tight = m["g"], self.gap_src * m["g"], m["tight"]
         out, y = [], top
         for ln in m["lines"]:
             lw = sum(self._kw(k, g, tight) for k in ln) + gap * (len(ln) - 1)
-            lh = max(k.h for k in ln) * g
+            lh = max(self._kh(k, g, tight) for k in ln)
             x = (x0 + x1) / 2 - lw / 2
             for k in ln:
-                kw = self._kw(k, g, tight)
-                out += k.emit(g, x, y + (lh - k.h * g) / 2, kw if tight else None)
+                kw, kh = self._kw(k, g, tight), self._kh(k, g, tight)
+                out += k.emit(g, x, y + (lh - kh) / 2, kw if tight else None, kh if tight else None)
                 x += kw + gap
             y += lh + gap * 0.8
         return out
@@ -663,10 +804,12 @@ def _max_scale(cols, widths, hc, s_cap, iters: int = 18) -> float | None:
     return lo
 
 
-def _col_factor(k: int, kp: int) -> float:
-    """Tall canvases stay single-column; elsewhere extra columns must earn it."""
+def _col_factor(k: int, kp: int, aspect: float = 1.0) -> float:
+    """Tall canvases stay single-column; elsewhere extra columns must earn it.
+    The penalty grows with tallness: a story (0.56) loses ~38% per extra
+    column, a square ~24%, a 300x250 (1.2) ~18%."""
     if kp == 1:
-        return 1.0 - 0.4 * (k - 1)
+        return 1.0 - (k - 1) * (0.15 + 0.25 * _clamp((1.3 - aspect) / 0.8, 0.0, 1.0))
     return (1.0 - 0.04 * (k - 1)) * (1.0 - 0.015 * max(0, kp - k))
 
 
@@ -704,7 +847,7 @@ def _hero_boost(col: list[_Unit], s: float, cw: float, hc: float) -> float:
     if not heroes:
         return 1.0
     old = [u.boost for u in heroes]
-    lo, hi = 1.0, 1.8
+    lo, hi = 1.0, 1.8 / _pr(heroes[0].prio, s)  # may grow back what the priority took away
     for u in heroes:
         u.boost = 1.0
     if _measure_col(col, s, cw)[2] > hc:
@@ -772,6 +915,19 @@ def _too_narrow(u: _Unit, cw: float) -> bool:
     return False
 
 
+def _stats(cols, widths, s: float) -> tuple[float, float]:
+    """(smallest rendered font, effective scale). When text is pinned at the
+    floor the raw s undersells the layout: the scale that counts is the one
+    the text actually got."""
+    ms = [m for c, cw in zip(cols, widths) for m in _measure_col(c, s, cw)[0]]
+    minfs = min(m["minfs"] for m in ms)
+    bigs = [m["big"] for m in ms if m.get("big")]
+    if not bigs:
+        return minfs, s
+    f, fs = max(bigs, key=lambda b: b[0])  # the largest source text: its achieved scale is the one that counts
+    return minfs, max(s, fs / f)
+
+
 def _measure_factor(cols, widths, s: float) -> float:
     """Penalise headline-like copy squeezed into a narrow column (many short
     lines is hard to read and looks like a layout accident)."""
@@ -789,7 +945,7 @@ def _measure_factor(cols, widths, s: float) -> float:
     return f
 
 
-def _set_ff(units: list[_Unit], ff: float) -> None:
+def _set_ff(units: list[_Unit], ff: tuple) -> None:
     for u in units:
         u.ff = ff
         if isinstance(u, _RowFlow):
@@ -805,7 +961,9 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
     kp = _k_pref(W, H)
     hc = H - 2 * geo.my
     ks = list(range(1, min(6 if W / H >= 5 else 4, n) + 1))
-    levels = (1.0, 0.75, 0.55, 0.4, 0.25, 0.0) if n <= 14 else (1.0, 0.5, 0.0)
+    # (absolute px floor, fraction of source size): hierarchy relaxes before legibility.
+    levels = ((7.0, 0.4), (7.0, 0.3), (7.0, 0.2), (7.0, 0.1), (7.0, 0.0), (6.0, 0.0), (5.0, 0.0), (4.0, 0.0), (0.0, 0.0)) \
+        if n <= 14 else ((7.0, 0.4), (7.0, 0.2), (7.0, 0.0), (5.0, 0.0), (0.0, 0.0))
     cap_parts = 120 if n <= 14 else max(3, 240 // (3 * len(ks)))
     coarse = []
     for ff in levels:
@@ -823,14 +981,15 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
                     widths = [avail * r / tot for r in rec]
                     if k > 1 and min(widths) < min(0.16, 0.7 / k) * W:
                         continue
-                    if ff > 0 and any(_too_narrow(u, cw) for c, cw in zip(cols, widths) for u in c):
+                    if ff != (0.0, 0.0) and any(_too_narrow(u, cw) for c, cw in zip(cols, widths) for u in c):
                         continue
                     _apply_caps(units, cols, widths)
                     s = _max_scale(cols, widths, hc, s_cap, 8)
                     if s is None:
                         continue
                     level_best = max(level_best, s)
-                    coarse.append((s * _col_factor(k, kp), cols, widths, ff))
+                    minfs, s_eff = _stats(cols, widths, s)
+                    coarse.append((s_eff * _col_factor(k, kp, W / H) * _legib(minfs), cols, widths, ff))
         if level_best >= 0.6 * s_cap:
             break
     coarse.sort(key=lambda c: -c[0])
@@ -843,8 +1002,8 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
         if s is None:
             continue
         hb = max(_hero_boost(c, s, cw, hc) for c, cw in zip(cols, widths))
-        minfs = min(m["minfs"] for c, cw in zip(cols, widths) for m in _measure_col(c, s, cw)[0])
-        score = _measure_factor(cols, widths, s) * s * min(1.0, minfs / 7.0) * _col_factor(k, kp) * (1.0 + 0.12 * (hb - 1.0))
+        minfs, s_eff = _stats(cols, widths, s)
+        score = _measure_factor(cols, widths, s) * s_eff * _legib(minfs) * _col_factor(k, kp, W / H) * (1.0 + 0.12 * (hb - 1.0))
         if best is None or score > best[0] + 1e-9:
             best = (score, s, cols, widths, ff)
     return best
@@ -918,10 +1077,11 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
             els = u.place(m, ax0, ax1, y) if not isinstance(u, _TextUnit) else u.place(m, x, x + cw, y)
             out += els
             for e in els:
-                if e["type"] != "shape":
-                    wgt = 1.0 if e["type"] == "text" else 0.15
-                    fw, fh = _fp(e["width"], e["height"], _rot(e))  # rotated boxes occupy their outline
-                    cx, cy = e["x"] + e["width"] / 2, e["y"] + e["height"] / 2
+                if e["type"] != "shape" or float(e.get("opacity", 1)) >= 0.5:
+                    wgt = 1.0 if e["type"] == "text" else (0.5 if e["type"] == "shape" else 0.15)
+                    bx, by, bw, bh = _ink_box(e)  # transparent padding of a picture is free space
+                    fw, fh = _fp(bw, bh, _rot(e))  # rotated boxes occupy their outline
+                    cx, cy = bx + bw / 2, by + bh / 2
                     occ.append((cx - fw / 2, cy - fh / 2, fw, fh, wgt))
             y += m["h"] + (gaps[i] if i < len(gaps) else 0.0)
         x += cw + geo.colgap
@@ -941,15 +1101,24 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
     sd = kfix if kfix is not None else min(W / Ws, H / Hs)
     shrinks = (1.0, 0.8, 0.65, 0.5, 0.35, 0.25) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
     placed = []
-    for e in sorted(deco, key=lambda e: -_area(_box(e))):
-        x, y, w, h = _box(e)
-        rot = _rot(e)
+    for e in sorted(deco, key=lambda e: -(e.w * e.h if isinstance(e, _Cluster) else _area(_box(e)))):
+        if isinstance(e, _Cluster):  # a corner sticker (ribbon, badge): its box already holds the rotation
+            x, y, w, h, rot = e.x0, e.y0, e.w, e.h, 0.0
+            kmin = max([6.0 / float(m.get("font_size", 16)) for m in e.els if m["type"] == "text"] + [0.0])
+        else:
+            x, y, w, h = _box(e)
+            rot = _rot(e)
+            kmin = 0.0
         fw0, fh0 = _fp(w, h, rot)
         fw0, fh0 = max(fw0, 1e-3), max(fh0, 1e-3)
         cx, cy = x + w / 2, y + h / 2
         best = None
         for shrink in shrinks:
             k = min(sd * shrink, 0.8 * W / fw0, 0.8 * H / fh0)
+            if k < kmin:  # a label never drops below the legibility floor just to dodge overlap
+                if best is not None:
+                    break
+                k = min(kmin, W / fw0, H / fh0)
             fw, fh = fw0 * k, fh0 * k
             cands = [(cx / Ws * W, cy / Hs * H)]
             qx = 0 if cx < Ws / 2 else 1
@@ -961,9 +1130,11 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
                 for py in (fh / 2, H - fh / 2):
                     cands.append((px, py))
             cands += [(W / 2, fh / 2), (W / 2, H - fh / 2), (fw / 2, H / 2), (W - fw / 2, H / 2)]
+            mx = geo.my if fw + 2 * geo.my <= W else 0.0  # keep a little air from the canvas edge
+            my = geo.my if fh + 2 * geo.my <= H else 0.0
             for px, py in cands:
-                px = _clamp(px, fw / 2, W - fw / 2)
-                py = _clamp(py, fh / 2, H - fh / 2)
+                px = _clamp(px, mx + fw / 2, W - mx - fw / 2)
+                py = _clamp(py, my + fh / 2, H - my - fh / 2)
                 rect = (px - fw / 2, py - fh / 2, fw, fh)
                 cost = sum(_inter(rect, o[:4]) * (6.0 if kfix is not None else o[4]) for o in occ) / max(1.0, fw * fh)
                 cost += 0.15 * (1 - shrink)
@@ -974,6 +1145,10 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
             if best[0] < 0.01:
                 break
         _, px, py, k = best
+        occ = occ + [(px - fw0 * k / 2, py - fh0 * k / 2, fw0 * k, fh0 * k, 1.0)]  # later pieces avoid this one
+        if isinstance(e, _Cluster):
+            placed += e.emit(k, px - w * k / 2, py - h * k / 2)
+            continue
         n = dict(e)
         n.update(width=w * k, height=h * k, x=px - w * k / 2, y=py - h * k / 2)
         placed.append(_scale_style(n, k))
@@ -994,7 +1169,7 @@ def _asset_missing(e: dict) -> bool:
 
 
 def _cluster(content: list[dict], panels: list[dict], use_groups: bool, overlaps: bool = True,
-             skip_groups: frozenset = frozenset()) -> list[list[dict]]:
+             skip_groups: frozenset = frozenset(), canvas_area: float = 1e12) -> list[list[dict]]:
     idx = {e["id"]: i for i, e in enumerate(content)}
     parent = list(range(len(content)))
 
@@ -1026,6 +1201,11 @@ def _cluster(content: list[dict], panels: list[dict], use_groups: bool, overlaps
             cb = _box(c)
             if _inter(sb, cb) >= 0.7 * _area(cb):
                 union(idx[sh["id"]], idx[c["id"]])
+    # A small picture with a text line right beside it (icon + label row) is one widget.
+    for i, a in enumerate(content):
+        for j, b in enumerate(content):
+            if _beside(a, b, canvas_area):
+                union(i, j)
     for i, a in enumerate(content if overlaps else []):
         for j in range(i + 1, len(content)):
             b = content[j]
@@ -1046,8 +1226,14 @@ def _cluster(content: list[dict], panels: list[dict], use_groups: bool, overlaps
     return list(buckets.values())
 
 
+def _spans(e: dict, axis: str, size: float) -> bool:
+    lo = float(e[axis])
+    hi = lo + float(e["width" if axis == "x" else "height"])
+    return lo <= 0.02 * size and hi >= 0.98 * size
+
+
 def _build_units(els: list[dict], Ws: int, Hs: int):
-    bg, deco, lost, content = [], [], [], []
+    bg, bands, deco, lost, content = [], [], [], [], []
     for e in els:
         if e.get("group_id"):
             content.append(e)  # a designer-grouped piece always travels with its group
@@ -1056,6 +1242,9 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
         if (e["type"] == "image" and cov >= 0.85 and not _rot(e)) or \
            (e["type"] == "shape" and cov >= 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e)):
             bg.append(e)
+        elif e["type"] == "shape" and 0.3 <= cov < 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e) \
+                and (_spans(e, "x", Ws) or _spans(e, "y", Hs)):
+            bands.append(e)  # a half-canvas colour panel: drawn as the same band, content flows over it
         elif e["type"] == "image" and _asset_missing(e) and _area(_box(e)) < 0.04 * Ws * Hs:
             lost.append(e)
         elif e["type"] == "shape" and float(e.get("opacity", 1)) < 0.9:
@@ -1093,7 +1282,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
             anchors.append(e)
 
     units: list[_Unit] = []
-    for members in _cluster(content, panels, True):
+    for members in _cluster(content, panels, True, canvas_area=Ws * Hs):
         # A "group" spanning most of the canvas is a layout, not a widget: split it.
         parts = [members]
         if len(members) > 2:
@@ -1111,7 +1300,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                     gy1 = max(m["y"] + m["height"] for m in gm)
                     if (gx1 - gx0) * (gy1 - gy0) > 0.45 * Ws * Hs:
                         giant.add(gid)
-                parts = _cluster(members, panels, True, False, frozenset(giant))
+                parts = _cluster(members, panels, True, False, frozenset(giant), Ws * Hs)
         for part in parts:
             part.sort(key=lambda e: e.get("z_index", 0))
             if len(part) == 1:
@@ -1122,6 +1311,8 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                     units.append(_ImageUnit(e))
                 else:
                     units.append(_Cluster(part))
+            elif len(part) == 2 and _beside(*sorted(part, key=lambda e: e["type"]), Ws * Hs):
+                units.append(_IconLabel(*sorted(part, key=lambda e: e["type"])))
             else:
                 units.append(_Cluster(part))
 
@@ -1138,7 +1329,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
         if hero.w * hero.h >= 0.04 * Ws * Hs:
             hero.is_hero = True
     for u in imgs:
-        u.prio = 0.55 if u.is_hero else 0.8
+        u.prio = 0.4 if u.is_hero else 0.6
     for u in imgs:
         if not u.is_hero and u.fw >= 2.0 * u.fh:
             u.min_w = 56.0  # a wordmark below ~56px wide is unreadable
@@ -1181,15 +1372,27 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
             for m in row:
                 units.remove(m)
             units.append(_RowFlow(row))
+    # A small widget parked in a corner (sale ribbon, sticker) is anchored there too,
+    # unless it sits right by the copy (a call-to-action under the body text stays in the flow).
+    texts = [u for u in units if isinstance(u, _TextUnit)]
+    for u in list(units):
+        if isinstance(u, _Cluster) and len(u.els) >= 2 and u.w * u.h <= 0.04 * Ws * Hs:
+            cx, cy = u.cx / Ws, u.cy / Hs
+            near = any(max(t.y0 - (u.y0 + u.h), u.y0 - (t.y0 + t.h)) <= 1.5 * u.h for t in texts)
+            if (cx < 0.22 or cx > 0.78) and (cy < 0.22 or cy > 0.78) and (u.has_rot or not near):
+                units.remove(u)
+                anchors.append(u)
     units.sort(key=lambda u: (u.cy, u.cx))
     _link_siblings(units)
-    return bg, deco, lost + anchors, anchors, units
+    return bg, bands, deco, lost + anchors, anchors, units
 
 
 def _scale_style(n: dict, k: float) -> dict:
     for key in ("corner_radius", "stroke_width"):
         if n.get(key):
             n[key] = float(n[key]) * k
+    if n.get("corner_radius"):
+        n["corner_radius"] = min(n["corner_radius"], float(n["width"]) / 2, float(n["height"]) / 2)
     return n
 
 
@@ -1235,8 +1438,8 @@ def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
             if a is b or a.t.f < 1.3 * b.t.f:
                 continue
             fa = placed.get(a.el["id"])
-            if fa:
-                c = fa["font_size"] * 0.95 * (b.t.f / a.t.f) ** 0.5
+            if fa and fa["font_size"] > 7.5:  # both tiny: legibility beats hierarchy
+                c = fa["font_size"] * max(0.92, 0.95 * (b.t.f / a.t.f) ** 0.5)
                 cap = c if cap is None else min(cap, c)
         if cap is not None and e["font_size"] > cap:
             fs, n, th = b.t.fit(cap, e["width"])
@@ -1249,10 +1452,10 @@ def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
 def _resize(source: dict, target: dict) -> dict:
     Ws, Hs = int(source["canvas"]["width"]), int(source["canvas"]["height"])
     W, H = int(target["width"]), int(target["height"])
-    if abs(math.log((W / H) / (Ws / Hs))) < 0.02:
+    if abs(math.log((W / H) / (Ws / Hs))) < 0.06:  # ~6%: nothing to rearrange, scale and crop the bg
         return _uniform(source, target)
     els = [dict(e) for e in source["elements"]]
-    bg, deco, lost, anchors, units = _build_units(els, Ws, Hs)
+    bg, bands, deco, lost, anchors, units = _build_units(els, Ws, Hs)
     geo = _Geo(W, H, Ws, Hs)
     s_cap = 1.6 * max(math.sqrt((W * H) / (Ws * Hs)), 0.7 * max(W / Ws, H / Hs))
 
@@ -1263,6 +1466,15 @@ def _resize(source: dict, target: dict) -> dict:
         if n["type"] == "image" and n.get("fit") in ("fill", "contain"):
             n["fit"] = "cover"
         out[n["id"]] = n
+
+    for e in bands:  # same fraction of the canvas, full span along the axis it spanned
+        n = dict(e)
+        x, y, w, h = _box(e)
+        if _spans(e, "y", Hs):
+            n.update(x=x / Ws * W, y=0, width=w / Ws * W, height=H)
+        else:
+            n.update(x=0, y=y / Hs * H, width=W, height=h / Hs * H)
+        out[n["id"]] = _scale_style(n, min(W / Ws, H / Hs))
 
     occ: list[tuple] = []
     s_used = 0.5 * min(W / Ws, H / Hs)
@@ -1277,11 +1489,20 @@ def _resize(source: dict, target: dict) -> dict:
 
     # Corner-anchored pictures and small missing assets keep a corner; place them first
     # (they matter more than decoration) and let decoration fill in around them.
-    pieces = list({e["id"]: e for e in list(lost) + list(anchors)}.values())
-    anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=max(s_used, 0.5 * min(W / Ws, H / Hs)))
+    pieces, seen = [], set()
+    for e in list(lost) + list(anchors):
+        key = id(e) if isinstance(e, _Cluster) else e["id"]
+        if key not in seen:
+            seen.add(key)
+            pieces.append(e)
+    # Stickers scale with the layout, but never beyond ~1.3x their share of the canvas.
+    kfix = min(max(s_used, 0.5 * min(W / Ws, H / Hs)), 1.3 * max(W / Ws, H / Hs), 1.3 * s_used)
+    anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=kfix)
     for e in anchored:
         out[e["id"]] = e
-        occ.append((e["x"], e["y"], e["width"], e["height"], 1.0))
+        fw, fh = _fp(e["width"], e["height"], _rot(e))
+        cx, cy = e["x"] + e["width"] / 2, e["y"] + e["height"] / 2
+        occ.append((cx - fw / 2, cy - fh / 2, fw, fh, 1.0))
     for e in _place_deco(list(deco), (Ws, Hs), geo, occ):
         out[e["id"]] = e
 

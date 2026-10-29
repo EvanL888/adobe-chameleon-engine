@@ -13,7 +13,7 @@ import math
 from functools import lru_cache
 from pathlib import Path
 
-from engine.resize import _Txt, _asset_missing, _normalize
+from engine.resize import _Txt, _asset_missing, _ink_box, _normalize
 
 SCHEMA_PATH = Path("chameleon_design_schema_v0.9.json")
 GEOM_KEYS = {"x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius",
@@ -47,6 +47,12 @@ def _area(b):
 def _is_bg(e, cw, ch):
     return (e["type"] in ("image", "shape") and
             _inter(_box(e), (0, 0, cw, ch)) >= 0.85 * cw * ch and not e.get("rotation"))
+
+
+def _ink(e):
+    """Occupied rect: a contain-fit picture's visible pixels (its transparent
+    padding does not collide), else the rotated bounding box."""
+    return _aabb(e) if e.get("rotation") or e["type"] != "image" else _ink_box(e)
 
 
 def _aabb(e):
@@ -155,8 +161,8 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
             sa, sb = src_els[ea["id"]], src_els[eb["id"]]
             if _inter(_box(sa), _box(sb)) > 0:
                 continue
-            ov = _inter(_aabb(ea), _aabb(eb))
-            if ov > 0.02 * min(_area(_box(ea)), _area(_box(eb))) and ov > 4:
+            ov = _inter(_ink(ea), _ink(eb))
+            if ov > 0.02 * min(_area(_ink(ea)), _area(_ink(eb))) and ov > 4:
                 err("collision", f"{ea['id']} x {eb['id']}")
     for t in (e for e in out["elements"] if e["type"] == "text"):
         for sh in (e for e in out["elements"] if e["type"] == "shape"):

@@ -1,0 +1,173 @@
+{
+ "task_id": "t56_icon_rows",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "icon + label feature rows (pairs are not grouped)",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 100,
+    "width": 900,
+    "height": 150,
+    "z_index": 294,
+    "content": "Why Solstice",
+    "font_family": "Solstice Serif",
+    "font_size": 80,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "ic0",
+    "type": "image",
+    "x": 120,
+    "y": 340,
+    "width": 120,
+    "height": 120,
+    "z_index": 295,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "lb0",
+    "type": "text",
+    "x": 280,
+    "y": 360,
+    "width": 700,
+    "height": 80,
+    "z_index": 296,
+    "content": "Benefit number 1 explained in one line",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "ic1",
+    "type": "image",
+    "x": 120,
+    "y": 530,
+    "width": 120,
+    "height": 120,
+    "z_index": 297,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "lb1",
+    "type": "text",
+    "x": 280,
+    "y": 550,
+    "width": 700,
+    "height": 80,
+    "z_index": 298,
+    "content": "Benefit number 2 explained in one line",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "ic2",
+    "type": "image",
+    "x": 120,
+    "y": 720,
+    "width": 120,
+    "height": 120,
+    "z_index": 299,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "lb2",
+    "type": "text",
+    "x": 280,
+    "y": 740,
+    "width": 700,
+    "height": 80,
+    "z_index": 300,
+    "content": "Benefit number 3 explained in one line",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "ic3",
+    "type": "image",
+    "x": 120,
+    "y": 910,
+    "width": 120,
+    "height": 120,
+    "z_index": 301,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "lb3",
+    "type": "text",
+    "x": 280,
+    "y": 930,
+    "width": 700,
+    "height": 80,
+    "z_index": 302,
+    "content": "Benefit number 4 explained in one line",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 340,
+    "y": 1140,
+    "width": 400,
+    "height": 90,
+    "z_index": 303,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 340,
+    "y": 1167.0,
+    "width": 400,
+    "height": 36.0,
+    "z_index": 304,
+    "content": "Learn more",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

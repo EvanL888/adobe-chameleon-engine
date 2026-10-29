@@ -166,6 +166,33 @@ def test_designs_dir() -> None:
     check("all adversarial designs produce output", not bad, str(bad[:3]))
 
 
+def test_legibility_and_widgets() -> None:
+    """Banner sizes keep every text readable; widgets found by the round-3 designs hold together."""
+    lvl3 = load("input/chameleon_sample_level3_advanced.json")["source"]
+    for w, h in [(728, 90), (300, 250), (970, 250)]:
+        out = resize(lvl3, {"width": w, "height": h})
+        small = [(e["id"], e["font_size"]) for e in out["elements"] if e["type"] == "text" and e["font_size"] < 6]
+        check(f"level 3 at {w}x{h}: no text under 6px", not small, str(small))
+
+    def by_id(out):
+        return {e["id"]: e for e in out["elements"]}
+
+    o = by_id(resize(load("tests/designs/t56_icon_rows.json")["source"], {"width": 1080, "height": 1920}))
+    paired = all(o[f"lb{i}"]["x"] >= o[f"ic{i}"]["x"] + o[f"ic{i}"]["width"] - 1
+                 and o[f"lb{i}"]["y"] < o[f"ic{i}"]["y"] + o[f"ic{i}"]["height"]
+                 and o[f"lb{i}"]["y"] + o[f"lb{i}"]["height"] > o[f"ic{i}"]["y"] for i in range(4))
+    check("icon + label rows stay paired", paired)
+
+    o = by_id(resize(load("tests/designs/t62_split_panels.json")["source"], {"width": 1080, "height": 1920}))
+    check("half-canvas panel is drawn as a full-height band", o["left"]["y"] == 0 and o["left"]["height"] == 1920)
+
+    o = by_id(resize(load("tests/designs/t57_price_tag.json")["source"], {"width": 1600, "height": 400}))
+    check("price bubble texts do not overlap", o["amt"]["y"] + o["amt"]["height"] <= o["per"]["y"] + 1)
+
+    o = by_id(resize(load("tests/designs/t55_two_column_landscape.json")["source"], {"width": 1080, "height": 1920}))
+    check("call to action stays below the body copy", o["cta_bg"]["y"] > o["s"]["y"] + o["s"]["height"] - 1)
+
+
 if __name__ == "__main__":
     for fn in [v for k, v in sorted(globals().items()) if k.startswith("test_")]:
         fn()
