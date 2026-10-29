@@ -26,6 +26,7 @@ from __future__ import annotations
 import itertools
 import math
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,26 @@ _BOLD = {"bold", "semibold", "extrabold", "black", "700", "800", "900", "600"}
 # --------------------------------------------------------------------------
 
 _REF = 200
+_tls = threading.local()   # .exact: verify final text sizes with the renderer's own measurer
+_fm_cache: dict[str, Any] = {}
+
+
+def _exact_widths(el: dict, size: float, text: str):
+    """Per-character widths exactly as the renderer measures them for wrapping
+    (skia, same font lookup), or None if the renderer package is unavailable."""
+    try:
+        if "fm" not in _fm_cache:
+            from renderer.converter.brand_fonts import load_brand_font_manager
+            _fm_cache["fm"] = load_brand_font_manager(str(_FONT_DIR))
+        from renderer.converter.convert import _BOLD_WEIGHTS, _normalize_weight, _weight_style_to_font_style
+        from renderer.converter.wrap import char_widths
+        weight = _normalize_weight(str(el.get("font_weight") or ""))
+        italic = str(el.get("font_style") or "").lower() == "italic"
+        style = _weight_style_to_font_style(weight in _BOLD_WEIGHTS, italic)
+        return char_widths(_fm_cache["fm"], str(el.get("font_family") or "Solstice Sans"), weight, style,
+                           size, text)
+    except Exception:
+        return None
 _font_objs: dict[Path, Any] = {}
 _adv_cache: dict[tuple, float] = {}
 
@@ -90,6 +111,7 @@ class _Txt:
     """Measures one text element: wraps exactly like the renderer does."""
 
     def __init__(self, el: dict):
+        self.el = el
         self.text = str(el.get("content", ""))
         self.f = max(1.0, float(el.get("font_size", 16) or 16))
         self.lh = float(el.get("line_height") or 1.2)
@@ -184,7 +206,43 @@ class _Txt:
         while w > max_w * 1.0005 + 0.01 and fs > 1.0:
             fs = max(1.0, round(fs - 0.01, 2))
             n, w = self.layout(fs, max_w)
+        if getattr(_tls, "exact", False) and self.text.strip():
+            # Final answer: confirm with the renderer's own measurement; if it would
+            # wrap onto more lines (or overflow) than we predicted, step down.
+            for _ in range(14):
+                r = self._exact(fs, max_w)
+                if r is None or (r[0] <= n and r[1] <= max_w * 1.0005 + 0.01):
+                    break
+                fs = max(1.0, math.floor(fs * 0.995 * 100) / 100)
+                n, w = self.layout(fs, max_w)
         return fs, n, self.height(n, fs)
+
+    def _exact(self, fs: float, max_w: float):
+        widths = _exact_widths(self.el, fs, self.text)
+        if widths is None or len(widths) != len(self.text):
+            return None
+        lw, last, cuts = 0.0, -1, []
+        for i, ch in enumerate(self.text):
+            if ch == "\n":
+                cuts.append(i)
+                lw, last = 0.0, -1
+                continue
+            w = widths[i]
+            if lw + w > max_w and last >= 0:
+                cuts.append(last)
+                lw = sum(widths[j] for j in range(last + 1, i + 1) if self.text[j] != "\n")
+                last = -1
+            else:
+                lw += w
+            if ch == " ":
+                last = i
+        cuts = sorted(set(cuts))
+        a, widest = 0, 0.0
+        ls = self.ls0 * fs / self.f
+        for b in cuts + [len(self.text)]:
+            widest = max(widest, sum(widths[a:b]) + ls * (b - a))
+            a = b + 1
+        return len(cuts) + 1, widest
 
 
 # --------------------------------------------------------------------------
@@ -271,6 +329,7 @@ class _Unit:
         self.ff = 1.0
         self.is_hero = False
         self.min_w = 0.0    # legibility floor (px) for logo-like pictures
+        self.prio = 1.0     # <1: minor text that yields space to the headline when tight
         self.cap_w = None   # shared width cap so sibling units end up the same size
         self.sib = None     # list of sibling units (similar widgets)
         self.x0 = self.y0 = self.w = self.h = 0.0
@@ -302,7 +361,8 @@ class _ImageUnit(_Unit):
         self.g_native = _native_cap(el)
 
     def measure(self, s: float, cw: float) -> dict:
-        g = max(s * self.boost, self.min_w * self.ff / max(self.fw, 1e-6))
+        pr = 1.0 - (1.0 - self.prio) * _clamp((0.4 - s) / 0.2, 0.0, 1.0)  # pictures yield to text when tight
+        g = max(s * self.boost * pr, self.min_w * self.ff / max(self.fw, 1e-6))
         g = min(g, cw / max(self.fw, 1e-6))
         if self.g_native:
             g = min(g, self.g_native)
@@ -342,10 +402,13 @@ class _TextUnit(_Unit):
         return True
 
     def measure(self, s: float, cw: float) -> dict:
-        fs = max(self.t.f * s * self.boost, _floor_px(self.t.f, self.ff))
+        # When everything must shrink hard, minor copy (legal line, small print)
+        # gives up more so the headline and call to action stay readable.
+        pr = 1.0 - (1.0 - self.prio) * _clamp((0.4 - s) / 0.2, 0.0, 1.0)
+        fs = max(self.t.f * s * self.boost * pr, _floor_px(self.t.f, self.ff) * pr)
         maxw = min(cw, max(self.w * s * 1.6, 0.7 * cw))
         fs, n, th = self.t.fit(fs, maxw)
-        return {"w": maxw, "h": th, "fs": fs, "minfs": fs}
+        return {"w": maxw, "h": th, "fs": fs, "minfs": fs, "n": n, "chars": len(self.t.text.strip())}
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
         e = dict(self.el)
@@ -600,6 +663,13 @@ def _max_scale(cols, widths, hc, s_cap, iters: int = 18) -> float | None:
     return lo
 
 
+def _col_factor(k: int, kp: int) -> float:
+    """Tall canvases stay single-column; elsewhere extra columns must earn it."""
+    if kp == 1:
+        return 1.0 - 0.4 * (k - 1)
+    return (1.0 - 0.04 * (k - 1)) * (1.0 - 0.015 * max(0, kp - k))
+
+
 def _k_pref(W: int, H: int) -> int:
     a = W / H
     if a < 1.3:
@@ -702,6 +772,23 @@ def _too_narrow(u: _Unit, cw: float) -> bool:
     return False
 
 
+def _measure_factor(cols, widths, s: float) -> float:
+    """Penalise headline-like copy squeezed into a narrow column (many short
+    lines is hard to read and looks like a layout accident)."""
+    items = []
+    for c, cw in zip(cols, widths):
+        for u, m in zip(c, _measure_col(c, s, cw)[0]):
+            if isinstance(u, _TextUnit) and m.get("chars", 0) >= 12:
+                items.append((u.t.f, m["n"], m["chars"]))
+    f = 1.0
+    for _, n, chars in sorted(items, reverse=True)[:2]:
+        if n > 3:
+            f *= 1.0 / (1.0 + 0.07 * (n - 3))
+        if chars / n < 12:
+            f *= 0.85
+    return f
+
+
 def _set_ff(units: list[_Unit], ff: float) -> None:
     for u in units:
         u.ff = ff
@@ -743,7 +830,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
                     if s is None:
                         continue
                     level_best = max(level_best, s)
-                    coarse.append((s * (1.0 - (0.4 if kp == 1 else 0.15) * abs(k - kp)), cols, widths, ff))
+                    coarse.append((s * _col_factor(k, kp), cols, widths, ff))
         if level_best >= 0.6 * s_cap:
             break
     coarse.sort(key=lambda c: -c[0])
@@ -757,7 +844,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
             continue
         hb = max(_hero_boost(c, s, cw, hc) for c, cw in zip(cols, widths))
         minfs = min(m["minfs"] for c, cw in zip(cols, widths) for m in _measure_col(c, s, cw)[0])
-        score = s * min(1.0, minfs / 7.0) * (1.0 - (0.4 if kp == 1 else 0.15) * abs(k - kp)) * (1.0 + 0.12 * (hb - 1.0))
+        score = _measure_factor(cols, widths, s) * s * min(1.0, minfs / 7.0) * _col_factor(k, kp) * (1.0 + 0.12 * (hb - 1.0))
         if best is None or score > best[0] + 1e-9:
             best = (score, s, cols, widths, ff)
     return best
@@ -789,6 +876,7 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
     if best is None:
         return None
     _, s, cols, widths, ff = best
+    _tls.exact = True
     _apply_caps(units, cols, widths)
     for u in units:
         u.ff = ff
@@ -849,7 +937,7 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
     Ws, Hs = src_wh
     W, H = geo.W, geo.H
     sd = kfix if kfix is not None else min(W / Ws, H / Hs)
-    shrinks = (1.0, 0.8, 0.65, 0.5) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
+    shrinks = (1.0, 0.8, 0.65, 0.5, 0.35, 0.25) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
     placed = []
     for e in sorted(deco, key=lambda e: -_area(_box(e))):
         x, y, w, h = _box(e)
@@ -875,7 +963,7 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
                 px = _clamp(px, fw / 2, W - fw / 2)
                 py = _clamp(py, fh / 2, H - fh / 2)
                 rect = (px - fw / 2, py - fh / 2, fw, fh)
-                cost = sum(_inter(rect, o[:4]) * (1.0 if kfix is not None else o[4]) for o in occ) / max(1.0, fw * fh)
+                cost = sum(_inter(rect, o[:4]) * (6.0 if kfix is not None else o[4]) for o in occ) / max(1.0, fw * fh)
                 cost += 0.15 * (1 - shrink)
                 if best is None or cost < best[0] - 1e-9:
                     best = (cost, px, py, k)
@@ -1035,12 +1123,20 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
             else:
                 units.append(_Cluster(part))
 
+    fmax = max([float(e.get("font_size", 16)) for e in els if e.get("type") == "text"] + [1.0])
+    for u in units:
+        if isinstance(u, _TextUnit):
+            r = u.t.f / fmax
+            u.prio = 1.0 if r >= 0.75 else (0.75 if r >= 0.45 else (0.6 if r >= 0.3 else 0.5))
+
     # Hero picture: the biggest free image, if it is a meaningful share of the canvas.
     imgs = [u for u in units if isinstance(u, _ImageUnit)]
     if imgs:
         hero = max(imgs, key=lambda u: u.w * u.h)
         if hero.w * hero.h >= 0.04 * Ws * Hs:
             hero.is_hero = True
+    for u in imgs:
+        u.prio = 0.55 if u.is_hero else 0.8
     for u in imgs:
         if not u.is_hero and u.fw >= 2.0 * u.fh:
             u.min_w = 56.0  # a wordmark below ~56px wide is unreadable
@@ -1101,12 +1197,13 @@ def _uniform(source: dict, target: dict) -> dict:
     W, H = int(target["width"]), int(target["height"])
     k = min(W / Ws, H / Hs)
     ox, oy = (W - Ws * k) / 2, (H - Hs * k) / 2
+    _tls.exact = True
     out = []
     for e in source["elements"]:
         n = dict(e)
         if _coverage(e, Ws, Hs) >= 0.85 and e["type"] in ("image", "shape") and not _rot(e):
             n.update(x=0, y=0, width=W, height=H)
-            if n["type"] == "image" and n.get("fit") == "fill":
+            if n["type"] == "image" and n.get("fit") in ("fill", "contain"):
                 n["fit"] = "cover"
         else:
             n.update(x=ox + e["x"] * k, y=oy + e["y"] * k, width=e["width"] * k, height=e["height"] * k)
@@ -1155,13 +1252,13 @@ def _resize(source: dict, target: dict) -> dict:
     els = [dict(e) for e in source["elements"]]
     bg, deco, lost, anchors, units = _build_units(els, Ws, Hs)
     geo = _Geo(W, H, Ws, Hs)
-    s_cap = 1.1 * max(math.sqrt((W * H) / (Ws * Hs)), 0.7 * max(W / Ws, H / Hs))
+    s_cap = 1.6 * max(math.sqrt((W * H) / (Ws * Hs)), 0.7 * max(W / Ws, H / Hs))
 
     out: dict[str, dict] = {}
     for e in bg:
         n = dict(e)
         n.update(x=0, y=0, width=W, height=H)
-        if n["type"] == "image" and n.get("fit") == "fill":
+        if n["type"] == "image" and n.get("fit") in ("fill", "contain"):
             n["fit"] = "cover"
         out[n["id"]] = n
 
@@ -1176,13 +1273,14 @@ def _resize(source: dict, target: dict) -> dict:
             out[e["id"]] = e
         _cap_hierarchy(units, out)
 
-    anchor_ids = {a["id"] for a in anchors}
-    anchored = _place_deco(anchors, (Ws, Hs), geo, occ, kfix=max(s_used, 0.5 * min(W / Ws, H / Hs)))
+    # Corner-anchored pictures and small missing assets keep a corner; place them first
+    # (they matter more than decoration) and let decoration fill in around them.
+    pieces = list({e["id"]: e for e in list(lost) + list(anchors)}.values())
+    anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=max(s_used, 0.5 * min(W / Ws, H / Hs)))
     for e in anchored:
         out[e["id"]] = e
         occ.append((e["x"], e["y"], e["width"], e["height"], 1.0))
-    rest = [e for e in deco + lost if e["id"] not in anchor_ids]
-    for e in _place_deco(rest, (Ws, Hs), geo, occ):
+    for e in _place_deco(list(deco), (Ws, Hs), geo, occ):
         out[e["id"]] = e
 
     result = [out[e["id"]] for e in els]
@@ -1308,6 +1406,13 @@ def _last_resort(source: dict, target: dict) -> dict:
 
 def resize(source: dict[str, Any], target_canvas: dict[str, Any]) -> dict[str, Any]:
     """Return `source` re-laid-out for `target_canvas` (same ids, new geometry)."""
+    try:
+        return _resize_safe(source, target_canvas)
+    finally:
+        _tls.exact = False
+
+
+def _resize_safe(source: dict[str, Any], target_canvas: dict[str, Any]) -> dict[str, Any]:
     try:
         clean = _normalize(source)
         tgt = {"width": max(1, int(round(_num(target_canvas["width"], 1)))),
