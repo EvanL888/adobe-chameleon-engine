@@ -96,7 +96,7 @@ class _Txt:
         self.ls0 = float(el.get("letter_spacing") or 0.0)
         ml = el.get("max_lines")
         self.max_lines = int(ml) if isinstance(ml, (int, float)) and ml and ml > 0 else None
-        fam = el.get("font_family", "")
+        fam = str(el.get("font_family") or "")
         bold = _is_bold(el.get("font_weight"))
         italic = str(el.get("font_style") or "").lower() == "italic"
         flags = [(bold, italic)] * len(self.text)
@@ -109,18 +109,32 @@ class _Txt:
             ri = (str(run["font_style"]).lower() == "italic") if "font_style" in run else italic
             for i in range(max(0, s), min(len(self.text), e)):
                 flags[i] = (rb, ri)
-        self.adv = [_adv(fam, b, i, ch) for ch, (b, i) in zip(self.text, flags)]
+        # The renderer wraps with the *base* style's glyph widths, but draws runs
+        # in their own weight and upper-cases when `capitalize` is set: keep both.
+        self.adv = [_adv(fam, bold, italic, ch) for ch in self.text]
+        up = bool(el.get("capitalize"))
+        self.advd = [_adv(fam, b, i, (ch.upper() if up and len(ch.upper()) == 1 else ch))
+                     for ch, (b, i) in zip(self.text, flags)]
         self.P = [0.0]
         for a in self.adv:
             self.P.append(self.P[-1] + a)
+        self.PD = [0.0]
+        for a in self.advd:
+            self.PD.append(self.PD[-1] + a)
         self._c: dict[tuple, tuple] = {}
+
+    def height(self, n: int, fs: float) -> float:
+        """Vertical extent of n lines. The renderer draws the first line at a
+        fixed offset (~1.27 x font size to the descenders) whatever line_height
+        is, so tight line heights must not shrink the block below that."""
+        return (n - 1) * self.lh * fs + max(self.lh, 1.27) * fs
 
     def layout(self, fs: float, max_w: float) -> tuple[int, float]:
         key = (round(fs, 4), round(max_w, 3))
         r = self._c.get(key)
         if r is not None:
             return r
-        adv, P, text = self.adv, self.P, self.text
+        adv, P, PD, text = self.adv, self.P, self.PD, self.text
         ls = self.ls0 * fs / self.f
         lw, last = 0.0, -1
         cuts = []
@@ -141,7 +155,7 @@ class _Txt:
         cuts = sorted(set(cuts))
         a, widest = 0, 0.0
         for b in cuts + [len(text)]:
-            widest = max(widest, (P[b] - P[a]) * fs + ls * (b - a))
+            widest = max(widest, (PD[b] - PD[a]) * fs + ls * (b - a))
             a = b + 1
         r = (len(cuts) + 1, widest)
         self._c[key] = r
@@ -159,7 +173,7 @@ class _Txt:
                 fs = max(1.0, fs * max(0.5, 0.995 * max_w / w))
             elif self.max_lines and n > self.max_lines and fs > max(min_fs, 1.0, 0.5 * start):
                 fs = max(min_fs, 1.0, 0.5 * start, fs * 0.96)
-            elif max_h is not None and n * fs * self.lh > max_h + 0.01 and fs > max(min_fs, 1.0):
+            elif max_h is not None and self.height(n, fs) > max_h + 0.01 and fs > max(min_fs, 1.0):
                 fs = max(min_fs, 1.0, fs * 0.95)
             else:
                 break
@@ -170,7 +184,7 @@ class _Txt:
         while w > max_w * 1.0005 + 0.01 and fs > 1.0:
             fs = max(1.0, round(fs - 0.01, 2))
             n, w = self.layout(fs, max_w)
-        return fs, n, n * fs * self.lh
+        return fs, n, self.height(n, fs)
 
 
 # --------------------------------------------------------------------------
@@ -214,6 +228,37 @@ def _floor_px(f: float, ff: float) -> float:
     return ff * max(6.0, 0.4 * f)
 
 
+_native_cache: dict[str, Any] = {}
+
+
+def _native_size(asset_id: Any):
+    key = str(asset_id)
+    if key not in _native_cache:
+        size = None
+        try:
+            from PIL import Image
+            with Image.open(_ASSET_DIR / key) as im:
+                size = im.size
+        except Exception:
+            size = None
+        _native_cache[key] = size
+    return _native_cache[key]
+
+
+def _native_cap(el: dict):
+    """Largest scale at which a picture is still <=1.25x its native pixels
+    (we may move and resize pictures but cannot add detail)."""
+    if el.get("type") != "image" or not el.get("asset_id"):
+        return None
+    size = _native_size(el["asset_id"])
+    w, h = float(el.get("width", 0)), float(el.get("height", 0))
+    if not size or w <= 0 or h <= 0:
+        return None
+    ratios = (w / size[0], h / size[1])
+    d0 = max(ratios) if el.get("fit") in ("cover", "fill") else min(ratios)
+    return 1.25 / d0 if d0 > 0 else None
+
+
 # --------------------------------------------------------------------------
 # Units
 # --------------------------------------------------------------------------
@@ -225,6 +270,7 @@ class _Unit:
         self.boost = 1.0
         self.ff = 1.0
         self.is_hero = False
+        self.min_w = 0.0    # legibility floor (px) for logo-like pictures
         self.cap_w = None   # shared width cap so sibling units end up the same size
         self.sib = None     # list of sibling units (similar widgets)
         self.x0 = self.y0 = self.w = self.h = 0.0
@@ -252,9 +298,14 @@ class _ImageUnit(_Unit):
         self.fw, self.fh = _fp(b[2], b[3], self.rot)
         cx, cy = b[0] + b[2] / 2, b[1] + b[3] / 2
         self.x0, self.y0, self.w, self.h = cx - self.fw / 2, cy - self.fh / 2, self.fw, self.fh
+        self.wmin = self.fw
+        self.g_native = _native_cap(el)
 
     def measure(self, s: float, cw: float) -> dict:
-        g = min(s * self.boost, cw / max(self.fw, 1e-6))
+        g = max(s * self.boost, self.min_w * self.ff / max(self.fw, 1e-6))
+        g = min(g, cw / max(self.fw, 1e-6))
+        if self.g_native:
+            g = min(g, self.g_native)
         return {"w": self.fw * g, "h": self.fh * g, "g": g, "minfs": 1e9}
 
     def floor_g(self) -> float:
@@ -263,7 +314,7 @@ class _ImageUnit(_Unit):
     def min_src_font(self) -> float:
         return 1e9
 
-    def emit(self, g: float, ox: float, oy: float) -> list[dict]:
+    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None) -> list[dict]:
         e = dict(self.el)
         w, h = float(self.el["width"]) * g, float(self.el["height"]) * g
         e.update(x=ox + self.fw * g / 2 - w / 2, y=oy + self.fh * g / 2 - h / 2, width=w, height=h)
@@ -337,6 +388,24 @@ class _Cluster(_Unit):
         self.x0, self.y0 = min(xs0), min(ys0)
         self.w, self.h = max(xs1) - self.x0, max(ys1) - self.y0
         self.has_rot = any(_rot(e) for e in els)
+        caps = [c for c in (_native_cap(e) for e in els) if c]
+        self.g_native = min(caps) if caps else None
+        # A pill/badge: one rectangle with one centred single-line label. Its
+        # shape can be tightened to the label, so it stays legible in narrow spaces.
+        self.chip = False
+        self.wmin = self.w
+        shapes = [e for e in els if e["type"] == "shape"]
+        texts = [e for e in els if e["type"] == "text"]
+        if len(els) == 2 and len(shapes) == 1 and len(texts) == 1 and not self.has_rot \
+                and shapes[0].get("shape_type") == "rectangle" and texts[0].get("text_align") == "center":
+            sx_, sy_, sw_, sh_ = _box(shapes[0])
+            tx_, ty_, tw_, th_ = _box(texts[0])
+            t = self.txt[texts[0]["id"]]
+            n1, one_line = t.layout(t.f, 1e9)
+            if n1 == 1 and sx_ <= tx_ + tw_ / 2 <= sx_ + sw_ and sy_ <= ty_ + th_ / 2 <= sy_ + sh_:
+                pad = max(0.0, (sw_ - one_line) / 2)
+                self.wmin = min(self.w, one_line + 2 * min(pad, 0.5 * sh_) + 1.0)
+                self.chip = self.wmin < self.w - 1.0
 
     def has_text(self) -> bool:
         return bool(self.txt)
@@ -355,25 +424,38 @@ class _Cluster(_Unit):
 
     def scale_for(self, s: float, cw: float) -> float:
         g = max(s * self.boost, self.floor_g())
-        return min(g, cw / max(self.w, 1e-6))
+        g = min(g, cw / max(self.wmin, 1e-6))
+        if self.g_native:
+            g = min(g, self.g_native)
+        return g
+
+    def width_at(self, g: float, cw: float | None = None, tight: bool = False) -> float:
+        if not self.chip:
+            return self.w * g
+        if tight:
+            return self.wmin * g
+        return self.w * g if cw is None else max(self.wmin * g, min(self.w * g, cw))
 
     def measure(self, s: float, cw: float) -> dict:
         g = self.scale_for(s, cw)
-        return {"w": self.w * g, "h": self.h * g, "g": g, "minfs": g * self.min_src_font()}
+        return {"w": self.width_at(g, cw), "h": self.h * g, "g": g, "minfs": g * self.min_src_font()}
 
-    def emit(self, g: float, ox: float, oy: float) -> list[dict]:
+    def emit(self, g: float, ox: float, oy: float, wchip: float | None = None) -> list[dict]:
         shapes = [e for e in self.els if e["type"] == "shape"]
+        hx = 1.0
+        if self.chip and wchip is not None and self.w * g > 0:
+            hx = max(0.05, min(1.0, wchip / (self.w * g)))
         out = []
         for e in self.els:
             x, y, w, h = _box(e)
-            ncx = ox + (x + w / 2 - self.x0) * g
+            ncx = ox + (x + w / 2 - self.x0) * g * hx
             ncy = oy + (y + h / 2 - self.y0) * g
-            nw, nh = w * g, h * g
+            nw, nh = w * g * hx, h * g
             n = dict(e)
             if e["type"] == "text":
                 t = self.txt[e["id"]]
                 fs0 = t.f * g
-                fs, lines, th = t.fit(fs0, nw, nh if self.src_fit[e["id"]] else None,
+                fs, lines, th = t.fit(fs0, nw, nh * 1.08 if self.src_fit[e["id"]] else None,
                                       min_fs=0.6 * fs0)
                 n["font_size"] = fs
                 if e.get("letter_spacing"):
@@ -396,7 +478,7 @@ class _Cluster(_Unit):
         return out
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
-        return self.emit(m["g"], (x0 + x1) / 2 - m["w"] / 2, top)
+        return self.emit(m["g"], (x0 + x1) / 2 - m["w"] / 2, top, m["w"] if self.chip else None)
 
 
 class _RowFlow(_Unit):
@@ -416,11 +498,15 @@ class _RowFlow(_Unit):
     def has_text(self) -> bool:
         return True
 
-    def _flow(self, g: float, cw: float) -> list[list[_Cluster]]:
+    @staticmethod
+    def _kw(k, g: float, tight: bool) -> float:
+        return (k.wmin if tight else k.w) * g
+
+    def _flow(self, g: float, cw: float, tight: bool) -> list[list]:
         gap = self.gap_src * g
         lines, cur, curw = [], [], 0.0
         for k in self.kids:
-            kw = k.w * g
+            kw = self._kw(k, g, tight)
             if cur and curw + gap + kw > cw + 0.01:
                 lines.append(cur)
                 cur, curw = [], 0.0
@@ -434,24 +520,36 @@ class _RowFlow(_Unit):
         for k in self.kids:
             k.ff = self.ff
         g = max(s * self.boost, max(k.floor_g() for k in self.kids))
-        g = min(g, cw / max(k.w for k in self.kids))
-        lines = self._flow(g, cw)
+        g = min(g, cw / max(k.wmin for k in self.kids))
+        natives = [k.g_native for k in self.kids if getattr(k, "g_native", None)]
+        if natives:
+            g = min(g, min(natives))
+        lines = self._flow(g, cw, False)
+        tight = False
+        if any(getattr(k, "chip", False) for k in self.kids):
+            gap0 = self.gap_src * g
+            too_wide = any(sum(self._kw(k, g, False) for k in ln) + gap0 * (len(ln) - 1) > cw + 0.01
+                           for ln in lines)
+            t_lines = self._flow(g, cw, True)
+            if too_wide or len(t_lines) < len(lines):
+                lines, tight = t_lines, True
         gap = self.gap_src * g
         h = sum(max(k.h for k in ln) * g for ln in lines) + gap * 0.8 * (len(lines) - 1)
-        w = max(sum(k.w * g for k in ln) + gap * (len(ln) - 1) for ln in lines)
-        return {"w": w, "h": h, "g": g, "lines": lines,
+        w = max(sum(self._kw(k, g, tight) for k in ln) + gap * (len(ln) - 1) for ln in lines)
+        return {"w": w, "h": h, "g": g, "lines": lines, "tight": tight,
                 "minfs": g * min(k.min_src_font() for k in self.kids)}
 
     def place(self, m: dict, x0: float, x1: float, top: float) -> list[dict]:
-        g, gap = m["g"], self.gap_src * m["g"]
+        g, gap, tight = m["g"], self.gap_src * m["g"], m["tight"]
         out, y = [], top
         for ln in m["lines"]:
-            lw = sum(k.w * g for k in ln) + gap * (len(ln) - 1)
+            lw = sum(self._kw(k, g, tight) for k in ln) + gap * (len(ln) - 1)
             lh = max(k.h for k in ln) * g
             x = (x0 + x1) / 2 - lw / 2
             for k in ln:
-                out += k.emit(g, x, y + (lh - k.h * g) / 2)
-                x += k.w * g + gap
+                kw = self._kw(k, g, tight)
+                out += k.emit(g, x, y + (lh - k.h * g) / 2, kw if tight else None)
+                x += kw + gap
             y += lh + gap * 0.8
         return out
 
@@ -510,7 +608,9 @@ def _k_pref(W: int, H: int) -> int:
         return 2
     if a < 4.5:
         return 3
-    return 4
+    if a < 7:
+        return 4
+    return 5
 
 
 def _partitions(n: int, k: int):
@@ -596,9 +696,9 @@ def _apply_caps(units: list[_Unit], cols: list[list[_Unit]], widths: list[float]
 def _too_narrow(u: _Unit, cw: float) -> bool:
     """True if a rigid unit cannot keep its text at the floor size in this column."""
     if isinstance(u, _Cluster):
-        return u.floor_g() * u.w > cw
+        return u.floor_g() * u.wmin > cw
     if isinstance(u, _RowFlow):
-        return any(k.floor_g() * k.w > cw for k in u.kids)
+        return any(k.floor_g() * k.wmin > cw for k in u.kids)
     return False
 
 
@@ -617,7 +717,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
     n = len(units)
     kp = _k_pref(W, H)
     hc = H - 2 * geo.my
-    ks = list(range(1, min(4, n) + 1))
+    ks = list(range(1, min(6 if W / H >= 5 else 4, n) + 1))
     levels = (1.0, 0.75, 0.55, 0.4, 0.25, 0.0) if n <= 14 else (1.0, 0.5, 0.0)
     cap_parts = 120 if n <= 14 else max(3, 240 // (3 * len(ks)))
     coarse = []
@@ -634,7 +734,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
                 for rec in _width_recipes(cols):
                     tot = sum(rec)
                     widths = [avail * r / tot for r in rec]
-                    if k > 1 and min(widths) < 0.16 * W:
+                    if k > 1 and min(widths) < min(0.16, 0.7 / k) * W:
                         continue
                     if ff > 0 and any(_too_narrow(u, cw) for c, cw in zip(cols, widths) for u in c):
                         continue
@@ -661,6 +761,26 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
         if best is None or score > best[0] + 1e-9:
             best = (score, s, cols, widths, ff)
     return best
+
+
+def _side_aligned(u: _Unit, col: list[_Unit], geo: _Geo):
+    """A picture/widget that shared a left (or right) edge with the column's
+    left- (right-) aligned text in the source keeps that shared edge."""
+    if isinstance(u, _TextUnit):
+        return None
+    texts = [t for t in col if isinstance(t, _TextUnit)]
+    if not texts:
+        return None
+    tol = 0.03 * geo.Ws
+    if all(t.el.get("text_align", "left") == "left" for t in texts):
+        ref = sorted(t.x0 for t in texts)[len(texts) // 2]
+        if abs(u.x0 - ref) <= tol:
+            return "left"
+    if all(t.el.get("text_align") == "right" for t in texts):
+        ref = sorted(t.x0 + t.w for t in texts)[len(texts) // 2]
+        if abs(u.x0 + u.w - ref) <= tol:
+            return "right"
+    return None
 
 
 def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
@@ -701,7 +821,13 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
             gaps = [g + (span - total) * w / tw for g, w in zip(gaps, wts)]
         y = top
         for i, (u, m) in enumerate(zip(col, ms)):
-            els = u.place(m, x, x + cw, y)
+            ax0, ax1 = x, x + cw
+            side = _side_aligned(u, col, geo)
+            if side == "left":
+                ax1 = x + m["w"]
+            elif side == "right":
+                ax0 = x + cw - m["w"]
+            els = u.place(m, ax0, ax1, y) if not isinstance(u, _TextUnit) else u.place(m, x, x + cw, y)
             out += els
             for e in els:
                 if e["type"] != "shape":
@@ -915,6 +1041,9 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
         hero = max(imgs, key=lambda u: u.w * u.h)
         if hero.w * hero.h >= 0.04 * Ws * Hs:
             hero.is_hero = True
+    for u in imgs:
+        if not u.is_hero and u.fw >= 2.0 * u.fh:
+            u.min_w = 56.0  # a wordmark below ~56px wide is unreadable
 
     # Similar chips (badges, tags...) on one row, or in neatly stacked rows,
     # become a flow row that can re-wrap as a grid.
@@ -1106,13 +1235,92 @@ def _fallback(source: dict, target: dict) -> dict:
     return {"canvas": {"width": W, "height": H}, "elements": _sanitize(out, W, H)}
 
 
+def _num(v: Any, default: float = 0.0) -> float:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return default
+    return f if math.isfinite(f) else default
+
+
+def _normalize(source: dict) -> dict:
+    """Deep, defensive copy: every number is a finite float, text fields are
+    strings, nothing can make later code raise on a malformed value."""
+    els = []
+    for i, e in enumerate(source.get("elements") or []):
+        if not isinstance(e, dict):
+            continue
+        n = dict(e)
+        if n.get("id") is None:
+            n["id"] = f"__noid{i}"
+        for k in ("x", "y"):
+            n[k] = _num(n.get(k))
+        for k in ("width", "height"):
+            n[k] = max(0.0, _num(n.get(k)))
+        for k in ("rotation", "opacity", "line_height", "letter_spacing", "corner_radius", "stroke_width"):
+            if k in n:
+                if n[k] is None or not math.isfinite(_num(n[k], float("nan"))):
+                    del n[k]
+                else:
+                    n[k] = _num(n[k])
+        if n.get("type") == "text":
+            n["content"] = "" if n.get("content") is None else str(n["content"])
+            n["font_size"] = max(1.0, _num(n.get("font_size"), 16.0))
+            n["font_family"] = str(n.get("font_family") or "Solstice Sans")
+            if not isinstance(n.get("style_runs"), list):
+                n.pop("style_runs", None)
+            if "max_lines" in n and not isinstance(n["max_lines"], (int, float)):
+                n["max_lines"] = None
+        els.append(n)
+    canvas = source.get("canvas") or {}
+    cw, ch = _num(canvas.get("width")), _num(canvas.get("height"))
+    if cw < 1 or ch < 1:  # unusable canvas: derive one from the content
+        cw = max([e["x"] + e["width"] for e in els] + [1.0])
+        ch = max([e["y"] + e["height"] for e in els] + [1.0])
+    return {**source, "canvas": {"width": int(round(cw)), "height": int(round(ch))}, "elements": els}
+
+
+def _last_resort(source: dict, target: dict) -> dict:
+    """Cannot raise: naive proportional scale of whatever can be read."""
+    W = max(1, int(_num(target.get("width") if isinstance(target, dict) else 1, 1)))
+    H = max(1, int(_num(target.get("height") if isinstance(target, dict) else 1, 1)))
+    try:
+        c = source.get("canvas") or {}
+        Ws, Hs = max(1.0, _num(c.get("width"), 1.0)), max(1.0, _num(c.get("height"), 1.0))
+    except Exception:
+        Ws = Hs = 1.0
+    k = min(W / Ws, H / Hs)
+    out = []
+    for e in (source.get("elements") or []):
+        if not isinstance(e, dict):
+            continue
+        n = dict(e)
+        w, h = max(0.0, _num(n.get("width"))) * k, max(0.0, _num(n.get("height"))) * k
+        w, h = min(w, W), min(h, H)
+        n["width"], n["height"] = round(w, 2), round(h, 2)
+        n["x"] = round(min(max(0.0, _num(n.get("x")) * k), W - w), 2)
+        n["y"] = round(min(max(0.0, _num(n.get("y")) * k), H - h), 2)
+        if n.get("type") == "text":
+            n["font_size"] = round(max(1.0, _num(n.get("font_size"), 16.0) * k), 2)
+        out.append(n)
+    return {"canvas": {"width": W, "height": H}, "elements": out}
+
+
 def resize(source: dict[str, Any], target_canvas: dict[str, Any]) -> dict[str, Any]:
     """Return `source` re-laid-out for `target_canvas` (same ids, new geometry)."""
     try:
-        res = _resize(source, target_canvas)
-        if {e["id"] for e in res["elements"]} == {e["id"] for e in source["elements"]}:
-            return res
+        clean = _normalize(source)
+        tgt = {"width": max(1, int(round(_num(target_canvas["width"], 1)))),
+               "height": max(1, int(round(_num(target_canvas["height"], 1))))}
+        try:
+            res = _resize(clean, tgt)
+            if {e["id"] for e in res["elements"]} == {e["id"] for e in clean["elements"]}:
+                return res
+        except Exception:
+            if os.environ.get("CHAMELEON_DEBUG"):
+                raise
+        return _fallback(clean, tgt)
     except Exception:
         if os.environ.get("CHAMELEON_DEBUG"):
             raise
-    return _fallback(source, target_canvas)
+        return _last_resort(source, target_canvas)

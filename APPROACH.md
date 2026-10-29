@@ -9,9 +9,10 @@
 3. **Bundle.** Pieces the designer tied together are *rigid clusters* that scale as one: same `group_id`, a visible panel/scrim behind text or a picture, text sitting on a picture, overlapping layers. A "group" spanning most of the canvas is treated as a layout and split. Look-alike widgets (badges, tags, feature cards, a grid of thumbnails) become a wrapping *flow row* so they can re-form as a row or a grid. Siblings that land in different columns are forced to the same width, so they end up the same size.
 4. **Search.** Units are sorted into reading order and split into 1-4 columns in every contiguous way (sampled when there are many), with several column-width recipes. A coarse binary search finds the largest uniform scale at which everything fits; the best few candidates are then evaluated exactly. Text is wrapped with a re-implementation of the renderer's own greedy wrap and the brand fonts' glyph widths, so measured line counts match the render. The score rewards scale, a column count that suits the canvas shape (tall canvas -> one column), legibility (smallest font) and how big the hero picture can grow. If text cannot reach its minimum size, the minimum is relaxed in steps.
 5. **Place.** The hero picture grows into spare height; gaps are stretched in proportion to the source gaps and the composition keeps the source's vertical extent (logo high, call-to-action low). Labels are centred on their button/badge shape. A smaller source text can never end up larger than a clearly bigger one.
-6. **Decorations and anchored pieces** are re-anchored to the nearest corner and placed where they overlap least with text.
+6. **Legibility details.** Pill/badge shapes tighten around their label when a column is narrow (so the label can stay big); logo-like wordmarks keep a minimum width; pictures are never enlarged beyond ~1.25x their native pixels; pictures that shared a left/right edge with aligned text keep that edge; very wide canvases may use up to 5-6 columns. Text height uses the renderer's real first-line offset, so tight `line_height` values (<1) cannot spill into neighbours, and `capitalize` text is measured upper-case.
+7. **Decorations and anchored pieces** are re-anchored to the nearest corner and placed where they overlap least with text.
 
-Hard rules honoured: same ids and count, nothing off-canvas (rotated elements: both the rotated outline and the unrotated box), images keep their aspect ratio (backgrounds crop with `cover`), fonts/copy untouched, z-order untouched, corner radius / stroke scale with the shape, `max_lines` respected, no pixel generation. If anything throws, a uniform contain-scale fallback is returned so the engine never crashes.
+Hard rules honoured: same ids and count, nothing off-canvas (rotated elements: both the rotated outline and the unrotated box), images keep their aspect ratio (backgrounds crop with `cover`), fonts/copy untouched, z-order untouched, corner radius / stroke scale with the shape, `max_lines` respected, no pixel generation. Malformed input (null/NaN/strings in numeric fields, missing canvas, garbage elements) is normalised first; if anything still throws,  a uniform contain-scale fallback is returned so the engine never crashes.
 
 ## Run
 
@@ -24,7 +25,8 @@ CHAMELEON_DEBUG=1 python -m engine.main     # raise instead of silently falling 
 ## Testing (all local, none of it is the official scorer)
 
 ```bash
-python -m tools.make_tests                  # (re)generate 46 adversarial designs in tests/designs/
+python -m tests.test_engine                 # fast invariants (malformed input, wrap parity with the real renderer, ...)
+python -m tools.make_tests                  # (re)generate 54 adversarial designs in tests/designs/
 python -m tools.eval_matrix --only-errors   # every design x 26 catalogue sizes x 6 derived sizes
 python -m tools.eval_matrix --design t32 --render --sizes 1080x1920 728x90
 python -m tools.vis t32 t41 --sizes 1080x1920 1600x900   # contact sheets in output/vis/

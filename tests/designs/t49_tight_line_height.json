@@ -1,0 +1,72 @@
+{
+ "task_id": "t49_tight_line_height",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "line_height below 1.0 must not let ink spill over the next element",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h1",
+    "type": "text",
+    "x": 90,
+    "y": 200,
+    "width": 900,
+    "height": 200,
+    "z_index": 251,
+    "content": "Tight leading headline that wraps across lines",
+    "font_family": "Solstice Serif",
+    "font_size": 84,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "line_height": 0.9
+   },
+   {
+    "id": "h2",
+    "type": "text",
+    "x": 90,
+    "y": 520,
+    "width": 900,
+    "height": 200,
+    "z_index": 252,
+    "content": "Even tighter second headline over lines",
+    "font_family": "Solstice Serif",
+    "font_size": 70,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "line_height": 0.8
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 340,
+    "y": 800,
+    "width": 400,
+    "height": 400,
+    "z_index": 253,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

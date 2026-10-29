@@ -1,0 +1,98 @@
+{
+ "task_id": "t50_left_aligned_page",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "everything shares a left edge",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 80,
+    "y": 70,
+    "width": 300,
+    "height": 100,
+    "z_index": 254,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 80,
+    "y": 300,
+    "width": 800,
+    "height": 200,
+    "z_index": 255,
+    "content": "Left aligned story",
+    "font_family": "Solstice Serif",
+    "font_size": 84,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 80,
+    "y": 540,
+    "width": 700,
+    "height": 200,
+    "z_index": 256,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 32,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 80,
+    "y": 800,
+    "width": 360,
+    "height": 80,
+    "z_index": 257,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 40.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 80,
+    "y": 823.2,
+    "width": 360,
+    "height": 33.6,
+    "z_index": 258,
+    "content": "Read more",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

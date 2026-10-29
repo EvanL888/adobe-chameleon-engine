@@ -29,7 +29,8 @@ Pick a design and any target size; the original and the engine's result are draw
 ## Tests
 
 ```bash
-python -m tools.make_tests                  # regenerate the 46 adversarial designs in tests/designs/
+python -m tests.test_engine                 # fast invariant tests
+python -m tools.make_tests                  # regenerate the 54 adversarial designs in tests/designs/
 python -m tools.eval_matrix --only-errors   # every design x 32 canvas sizes, strict checks
 python -m tools.fuzz --n 200 --seed 1       # random designs, hunts crashes and rule violations
 ```

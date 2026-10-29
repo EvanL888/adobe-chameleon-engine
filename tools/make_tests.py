@@ -288,6 +288,42 @@ def build():
         T("q", 90, 280, 900, 500, "“Design is not just what it looks like and feels like. Design is how it works.”",
           58, SERIF, align="left", font_style="italic"),
         T("a", 90, 900, 900, 60, "— someone wise", 30, align="right")], "long quote + attribution")
+
+    # ---- round 2: gaps found by the audit ----------------------------------------------------
+    add("t47_invalid_values", 1080, 1350, [BG(1080, 1350),
+        T("h", "abc", 500, 900, None, "Bad numbers everywhere", 70, SERIF, font_weight="bold"),
+        T("s", 140, 700, 800, 100, LOREM, None, line_height=None),
+        I("p", 290, 150, None, 400, BOT)], "null / non-numeric geometry, font_size and line_height")
+    add("t48_capitalize", 1080, 1080, [BG(1080, 1080),
+        T("h", 90, 300, 900, 160, "wide letters when capitalised", 66, SERIF, font_weight="bold", capitalize=True),
+        T("s", 140, 560, 800, 150, "lowercase source that renders uppercase " * 2, 34, capitalize=True)],
+        "renderer upper-cases at draw time but wraps with the original-case widths")
+    add("t49_tight_line_height", 1080, 1350, [BG(1080, 1350),
+        T("h1", 90, 200, 900, 200, "Tight leading headline that wraps across lines", 84, SERIF,
+          font_weight="bold", line_height=0.9),
+        T("h2", 90, 520, 900, 200, "Even tighter second headline over lines", 70, SERIF, font_weight="bold",
+          line_height=0.8),
+        I("p", 340, 800, 400, 400, BOT)], "line_height below 1.0 must not let ink spill over the next element")
+    add("t50_left_aligned_page", 1080, 1350, [BG(1080, 1350),
+        I("logo", 80, 70, 300, 100, LOGO),
+        T("h", 80, 300, 800, 200, "Left aligned story", 84, SERIF, align="left", font_weight="bold"),
+        T("s", 80, 540, 700, 200, LOREM, 32, align="left"),
+        *button("cta", 80, 800, 360, 80, "Read more", fs=28)], "everything shares a left edge")
+    add("t51_small_logo", 1080, 1350, [BG(1080, 1350),
+        I("logo", 420, 50, 240, 80, LOGO), T("h", 90, 200, 900, 400, "A very long headline " * 6, 60, SERIF),
+        T("s", 90, 700, 900, 300, LOREM * 3, 28)], "wordmark must stay legible on tiny canvases")
+    add("t52_small_native", 1080, 1350, [BG(1080, 1350), I("p", 440, 200, 120, 120, BOT),
+        T("h", 90, 500, 900, 150, "Small picture, huge poster", 70, SERIF, font_weight="bold")],
+        "picture box far below native size; do not blow it up beyond its pixels")
+    add("t53_eight_chips", 1080, 1080, [BG(1080, 1080),
+        T("h", 90, 120, 900, 120, "Eight tags in a row", 64, SERIF, font_weight="bold"),
+        *sum([button(f"c{i}", 40 + (i % 4) * 250, 400 + (i // 4) * 90, 230, 60, f"TAG NUMBER {i + 1}", fs=20)
+              for i in range(8)], [])], "8 equal chips: banners may need more than 4 columns")
+    add("t54_long_pills", 1080, 1350, [BG(1080, 1350),
+        T("h", 90, 120, 900, 120, "Pills with long labels", 64, SERIF, font_weight="bold"),
+        *button("p1", 100, 400, 880, 90, "SIGN UP FOR THE NEWSLETTER TODAY", fs=30),
+        *button("p2", 100, 540, 880, 90, "DOWNLOAD THE FULL REPORT NOW", fs=30),
+        *button("p3", 100, 680, 880, 90, "BOOK A DEMO WITH OUR TEAM", fs=30)], "wide pills that can be tightened")
     return D
 
 

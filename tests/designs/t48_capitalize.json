@@ -1,0 +1,60 @@
+{
+ "task_id": "t48_capitalize",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "renderer upper-cases at draw time but wraps with the original-case widths",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1080
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 300,
+    "width": 900,
+    "height": 160,
+    "z_index": 249,
+    "content": "wide letters when capitalised",
+    "font_family": "Solstice Serif",
+    "font_size": 66,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "capitalize": true
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 560,
+    "width": 800,
+    "height": 150,
+    "z_index": 250,
+    "content": "lowercase source that renders uppercase lowercase source that renders uppercase ",
+    "font_family": "Solstice Sans",
+    "font_size": 34,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "capitalize": true
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1080
+ }
+}

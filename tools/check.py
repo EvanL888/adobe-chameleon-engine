@@ -13,7 +13,7 @@ import math
 from functools import lru_cache
 from pathlib import Path
 
-from engine.resize import _Txt, _asset_missing
+from engine.resize import _Txt, _asset_missing, _normalize
 
 SCHEMA_PATH = Path("chameleon_design_schema_v0.9.json")
 GEOM_KEYS = {"x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius",
@@ -69,6 +69,7 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
 
     if source != source_snapshot:
         err("mutated-input", "resize() modified its input")
+    source = _normalize(source)  # malformed numbers in a test design must not crash the checker
     if out2 is not None and out != out2:
         err("nondeterministic", "two runs gave different output")
 
@@ -121,7 +122,7 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
             if _is_bg(s, cw, ch):
                 if (abs(o["x"]) > .5 or abs(o["y"]) > .5 or abs(o["width"] - W) > .5 or abs(o["height"] - H) > .5):
                     err("bg-not-full", f"{i}")
-            elif s["height"] and o["height"] and s.get("fit") != "cover":
+            elif s["height"] and s["width"] and o["height"] and o["width"] and s.get("fit") != "cover":
                 a0, a1 = s["width"] / s["height"], o["width"] / o["height"]
                 if abs(a1 / a0 - 1) > 0.05:
                     err("aspect", f"{i}: {a0:.2f}->{a1:.2f}")
@@ -140,8 +141,8 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
             src_overflow_w = ws_ > s["width"] * 1.001
             if widest > o["width"] * 1.01 + 0.5 and not src_overflow_w:
                 err("text-overflow-w", f"{i}: line {widest:.0f} > box {o['width']:.0f}")
-            if n * o["font_size"] * t.lh > o["height"] + 1.5 and not src_overflow_h:
-                err("text-overflow-h", f"{i}: {n} lines need {n * o['font_size'] * t.lh:.0f} > {o['height']:.0f}")
+            if t.height(n, o["font_size"]) > o["height"] + 1.5 and not src_overflow_h:
+                err("text-overflow-h", f"{i}: {n} lines need {t.height(n, o['font_size']):.0f} > {o['height']:.0f}")
             if s.get("max_lines") and n > s["max_lines"]:
                 warn("max-lines", f"{i}: {n} lines > max_lines {s['max_lines']}")
 
@@ -175,6 +176,8 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
     for g, ids in groups.items():
         if len(ids) < 2:
             continue
+        if len(ids) == 2 and {src_els[i]["type"] for i in ids} == {"shape", "text"}:
+            continue  # a pill: its shape may be tightened around the label on purpose
         nt = [i for i in ids if src_els[i]["type"] != "text"] or ids
         if any(src_els[i].get("rotation") for i in ids):
             continue
@@ -231,6 +234,20 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
                  or e["y"] + e["height"] > 0.996 * H)]
         if edge:
             warn("edge-touch", ",".join(edge[:4]))
+
+    # ---- judge-style proxies (warnings only) ------------------------------------------
+    body = [e for e in out["elements"] if e["type"] in ("text", "image") and not _is_bg(src_els[e["id"]], cw, ch)
+            and e["width"] > 0 and e["height"] > 0]
+    if len(body) >= 3:
+        area = sum(e["width"] * e["height"] for e in body)
+        mx = sum((e["x"] + e["width"] / 2) * e["width"] * e["height"] for e in body) / area
+        my = sum((e["y"] + e["height"] / 2) * e["width"] * e["height"] for e in body) / area
+        if abs(mx - W / 2) > 0.28 * W or abs(my - H / 2) > 0.28 * H:
+            warn("unbalanced", f"visual centre ({mx / W:.0%},{my / H:.0%}) is far from the middle")
+        lefts = sorted(e["x"] for e in body if e["type"] == "text" and e.get("text_align", "left") == "left")
+        near = sum(1 for a, b in zip(lefts, lefts[1:]) if 0.6 < b - a < max(2.0, 0.006 * W))
+        if near:
+            warn("misaligned", f"{near} left edges almost (but not quite) line up")
     return F
 
 

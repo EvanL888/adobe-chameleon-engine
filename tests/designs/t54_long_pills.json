@@ -1,0 +1,131 @@
+{
+ "task_id": "t54_long_pills",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "wide pills that can be tightened",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 120,
+    "width": 900,
+    "height": 120,
+    "z_index": 281,
+    "content": "Pills with long labels",
+    "font_family": "Solstice Serif",
+    "font_size": 64,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "p1_bg",
+    "type": "shape",
+    "x": 100,
+    "y": 400,
+    "width": 880,
+    "height": 90,
+    "z_index": 282,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "p1"
+   },
+   {
+    "id": "p1_label",
+    "type": "text",
+    "x": 100,
+    "y": 427.0,
+    "width": 880,
+    "height": 36.0,
+    "z_index": 283,
+    "content": "SIGN UP FOR THE NEWSLETTER TODAY",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "p1"
+   },
+   {
+    "id": "p2_bg",
+    "type": "shape",
+    "x": 100,
+    "y": 540,
+    "width": 880,
+    "height": 90,
+    "z_index": 284,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "p2"
+   },
+   {
+    "id": "p2_label",
+    "type": "text",
+    "x": 100,
+    "y": 567.0,
+    "width": 880,
+    "height": 36.0,
+    "z_index": 285,
+    "content": "DOWNLOAD THE FULL REPORT NOW",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "p2"
+   },
+   {
+    "id": "p3_bg",
+    "type": "shape",
+    "x": 100,
+    "y": 680,
+    "width": 880,
+    "height": 90,
+    "z_index": 286,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "p3"
+   },
+   {
+    "id": "p3_label",
+    "type": "text",
+    "x": 100,
+    "y": 707.0,
+    "width": 880,
+    "height": 36.0,
+    "z_index": 287,
+    "content": "BOOK A DEMO WITH OUR TEAM",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "p3"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}
