@@ -42,5 +42,5 @@ The adversarial designs cover: empty / whitespace / newline / CJK / emoji / unbr
 - Extreme shapes with a lot of copy (e.g. 300x250 or 728x90 from the Level 3 design, or anything <= 90px tall) produce very small text because stage one forbids dropping or rewriting elements. Badge pills are rigid, so in narrow columns their labels get small; a "tight pill" re-fit is a possible improvement.
 - Unbreakable words longer than the canvas shrink the whole text to fit (the renderer never breaks mid-word).
 - Fonts without CJK/emoji glyphs render as tofu in the renderer; we only measure.
-- No contrast/"busy background" analysis: we keep text off other content and decoration but cannot recolour text.
+- Legibility vs background: `python -m tools.contrast` renders each result without text and measures contrast and background busyness behind every text box. Across 285 renders no text sat on a busy background; the only low-contrast pair is the brand's own white-on-orange button label (3.2:1), which we may not recolour.
 - Docker build not verified on the author's machine (no Docker installed); the engine imports only the stdlib and Pillow.

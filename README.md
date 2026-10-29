@@ -26,6 +26,10 @@ python -m viewer.serve           # open http://127.0.0.1:5057
 
 Pick a design and any target size; the original and the engine's result are drawn side by side with the real renderer. `viewer/gallery.html` is a pre-rendered version that opens in any browser with no setup (rebuild with `python -m viewer.build_static`).
 
+## Adobe Express add-on
+
+`addon/` is a minimal Express add-on (manifest v2, panel entry point) that shows the pre-rendered before/after results and, inside Express, can drop the result onto the canvas. Rebuild with `python -m viewer.build_addon`. It was checked in a browser at panel width but not inside Express itself.
+
 ## Tests
 
 ```bash
@@ -33,6 +37,7 @@ python -m tests.test_engine                 # fast invariant tests
 python -m tools.make_tests                  # regenerate the 54 adversarial designs in tests/designs/
 python -m tools.eval_matrix --only-errors   # every design x 32 canvas sizes, strict checks
 python -m tools.fuzz --n 200 --seed 1       # random designs, hunts crashes and rule violations
+python -m tools.contrast                    # text contrast / busy-background analysis on rendered results
 ```
 
 See APPROACH.md for what each check covers and the known limits. The organizers' original starter README is kept as [STARTER_README.md](STARTER_README.md); the rules are in [RULES.md](RULES.md).
