@@ -920,7 +920,9 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
             for e in els:
                 if e["type"] != "shape":
                     wgt = 1.0 if e["type"] == "text" else 0.15
-                    occ.append((e["x"], e["y"], e["width"], e["height"], wgt))
+                    fw, fh = _fp(e["width"], e["height"], _rot(e))  # rotated boxes occupy their outline
+                    cx, cy = e["x"] + e["width"] / 2, e["y"] + e["height"] / 2
+                    occ.append((cx - fw / 2, cy - fh / 2, fw, fh, wgt))
             y += m["h"] + (gaps[i] if i < len(gaps) else 0.0)
         x += cw + geo.colgap
     return out, occ, s
