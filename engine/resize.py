@@ -1179,11 +1179,13 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
             for px in (fw / 2, W - fw / 2):
                 for py in (fh / 2, H - fh / 2):
                     cands.append((px, py))
-            cands += [(W / 2, fh / 2), (W / 2, H - fh / 2), (fw / 2, H / 2), (W - fw / 2, H / 2)]
+            n_main = len(cands)  # source spot, mirrored spot, corners: preferred
+            for q in (0.25, 0.5, 0.75):  # along the edges too, when the corners are taken
+                cands += [(W * q, fh / 2), (W * q, H - fh / 2), (fw / 2, H * q), (W - fw / 2, H * q)]
             m = geo.my
             mx = m if fw + 2 * m <= W else 0.0  # keep a little air from the canvas edge...
             my = m if fh + 2 * m <= H else 0.0
-            for (px, py), air in itertools.product(cands, (1, 0.35, 0)):
+            for (ci, (px, py)), air in itertools.product(enumerate(cands), (1, 0.35, 0)):
                 if air < 1 and not (mx or my):
                     continue
                 px = _clamp(px, mx * air + fw / 2, W - mx * air - fw / 2)
@@ -1193,7 +1195,7 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
                            for qx_, qy_, qw, qh in parts for o in occ) / max(1.0, p_area * k * k)
                 # ...unless less air avoids a collision; flush to the edge reads as clipped,
                 # so it costs more than a modest shrink.
-                cost += 0.15 * (1 - shrink) + {1: 0.0, 0.35: 0.035, 0: 0.08}[air]
+                cost += 0.15 * (1 - shrink) + {1: 0.0, 0.35: 0.035, 0: 0.08}[air] + (0.012 if ci >= n_main else 0.0)
                 if best is None or cost < best[0] - 1e-9:
                     best = (cost, px, py, k)
                 if cost < 0.01 and shrink == 1.0:
@@ -1492,7 +1494,36 @@ def _uniform(source: dict, target: dict) -> dict:
                 n["font_size"] = fs
                 n["height"] = max(n["height"], th)
         out.append(n)
+    _nudge_inside(out, W, H)
     return {"canvas": {"width": W, "height": H}, "elements": _sanitize(out, W, H)}
+
+
+def _nudge_inside(out: list[dict], W: int, H: int) -> None:
+    """Scaling copies the source's own slips: a tilted ribbon poking past the border,
+    text touching the canvas edge. Move each such piece (its whole group) just inside."""
+    pad = 0.006 * min(W, H)
+    pieces: dict = {}
+    for n in out:
+        if n["width"] >= 0.98 * W and n["height"] >= 0.98 * H:
+            continue  # background
+        pieces.setdefault(n.get("group_id") or ("id", n["id"]), []).append(n)
+    for ms in pieces.values():
+        if not any(_rot(m) or m["type"] == "text" for m in ms):
+            continue
+        rs = []
+        for m in ms:
+            fw, fh = _fp(m["width"], m["height"], _rot(m)) if _rot(m) else (m["width"], m["height"])
+            cx, cy = m["x"] + m["width"] / 2, m["y"] + m["height"] / 2
+            rs.append((cx - fw / 2, cy - fh / 2, cx + fw / 2, cy + fh / 2))
+        x0, y0 = min(r[0] for r in rs), min(r[1] for r in rs)
+        x1, y1 = max(r[2] for r in rs), max(r[3] for r in rs)
+        if x1 - x0 > W - 2 * pad or y1 - y0 > H - 2 * pad:
+            continue  # spans the canvas: nothing to nudge into
+        dx = max(0.0, pad - x0) - max(0.0, x1 - (W - pad))
+        dy = max(0.0, pad - y0) - max(0.0, y1 - (H - pad))
+        for m in ms:
+            m["x"] += dx
+            m["y"] += dy
 
 
 def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
@@ -1655,6 +1686,18 @@ def _sanitize(elements: list[dict], W: int, H: int) -> list[dict]:
             cx, cy = float(e["x"]) + w / 2, float(e["y"]) + h / 2
             w, h = w * f, h * f
             e["x"], e["y"] = cx - w / 2, cy - h / 2
+        x0, y0 = float(e["x"]), float(e["y"])
+        if e["type"] == "shape" and w > 0 and h > 0 and not _rot(e) \
+                and (x0 < 0 or y0 < 0 or x0 + w > W or y0 + h > H):
+            # A shape bleeding off the canvas shrinks into the corner it bled toward,
+            # rather than sliding inward over the copy.
+            f = min((min(x0 + w, W) - max(x0, 0)) / w, (min(y0 + h, H) - max(y0, 0)) / h)
+            if f >= 0.3:
+                nw, nh = w * f, h * f
+                e["x"] = W - nw if x0 + w > W else max(x0, 0.0)
+                e["y"] = H - nh if y0 + h > H else max(y0, 0.0)
+                w, h = nw, nh
+                _scale_style(e, f)
         w, h = min(w, float(W)), min(h, float(H))
         x = _clamp(float(e["x"]), 0.0, W - w)
         y = _clamp(float(e["y"]), 0.0, H - h)

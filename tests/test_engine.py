@@ -236,6 +236,16 @@ def test_cards_scrims_caps() -> None:
         bad = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0)
                if c[1] in ("max-lines", "hierarchy")]
         check(f"max_lines/hierarchy hold: {os.path.basename(f)} at {w}x{h}", not bad, str(bad[:2]))
+    # Source slips do not carry over (same aspect: ribbon past the border, bleeding art
+    # slid onto the headline), and a ribbon finds air along an edge when corners are taken.
+    for f, w, h, code in [("input/chameleon_sample_level3_advanced.json", 2160, 2700, "rotated-off-canvas"),
+                          ("tests/designs/t18_offcanvas_source.json", 1080, 1080, "text-on-shape"),
+                          ("tests/designs/t47_invalid_values.json", 1080, 1350, "edge-touch"),
+                          ("input/chameleon_sample_level3_advanced.json", 820, 312, "edge-touch")]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        bad = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0) if c[1] == code]
+        check(f"no {code}: {os.path.basename(f)} at {w}x{h}", not bad, str(bad[:2]))
 
 
 if __name__ == "__main__":
