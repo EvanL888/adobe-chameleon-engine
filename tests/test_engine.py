@@ -166,6 +166,88 @@ def test_designs_dir() -> None:
     check("all adversarial designs produce output", not bad, str(bad[:3]))
 
 
+def test_legibility_and_widgets() -> None:
+    """Banner sizes keep every text readable; widgets found by the round-3 designs hold together."""
+    lvl3 = load("input/chameleon_sample_level3_advanced.json")["source"]
+    for w, h in [(728, 90), (300, 250), (970, 250)]:
+        out = resize(lvl3, {"width": w, "height": h})
+        small = [(e["id"], e["font_size"]) for e in out["elements"] if e["type"] == "text" and e["font_size"] < 6]
+        check(f"level 3 at {w}x{h}: no text under 6px", not small, str(small))
+
+    def by_id(out):
+        return {e["id"]: e for e in out["elements"]}
+
+    o = by_id(resize(load("tests/designs/t56_icon_rows.json")["source"], {"width": 1080, "height": 1920}))
+    paired = all(o[f"lb{i}"]["x"] >= o[f"ic{i}"]["x"] + o[f"ic{i}"]["width"] - 1
+                 and o[f"lb{i}"]["y"] < o[f"ic{i}"]["y"] + o[f"ic{i}"]["height"]
+                 and o[f"lb{i}"]["y"] + o[f"lb{i}"]["height"] > o[f"ic{i}"]["y"] for i in range(4))
+    check("icon + label rows stay paired", paired)
+
+    o = by_id(resize(load("tests/designs/t62_split_panels.json")["source"], {"width": 1080, "height": 1920}))
+    check("half-canvas panel is drawn as a full-height band", o["left"]["y"] == 0 and o["left"]["height"] == 1920)
+
+    o = by_id(resize(load("tests/designs/t57_price_tag.json")["source"], {"width": 1600, "height": 400}))
+    check("price bubble texts do not overlap", o["amt"]["y"] + o["amt"]["height"] <= o["per"]["y"] + 1)
+
+    o = by_id(resize(load("tests/designs/t55_two_column_landscape.json")["source"], {"width": 1080, "height": 1920}))
+    check("call to action stays below the body copy", o["cta_bg"]["y"] > o["s"]["y"] + o["s"]["height"] - 1)
+
+
+def test_corner_pieces_never_land_on_content() -> None:
+    from engine.resize import _ink_box
+    from tools.check import check as full_check, snapshot
+    for f, w, h in [("input/chameleon_sample_level2_core.json", 320, 50),
+                    ("tests/designs/t22_missing_assets.json", 5400, 7200),
+                    ("tests/designs/t22_missing_assets.json", 1112, 1350)]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        errs = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0) if c[0] == "ERR"]
+        check(f"no collisions: {os.path.basename(f)} at {w}x{h}", not errs, str(errs[:2]))
+    out = resize(load("input/chameleon_sample_level2_core.json")["source"], {"width": 320, "height": 50})
+    p = next(e for e in out["elements"] if e["id"] == "product")
+    check("hero picture stays visible on a 320x50 banner", max(p["width"], p["height"]) >= 20, str(p["width"]))
+    # Stickers keep some air from the canvas edge when there is room (flush reads as clipped).
+    for f, w, h, ids in [("input/chameleon_sample_level2_core.json", 300, 600, ("badge_label",)),
+                         ("input/chameleon_sample_level3_advanced.json", 1350, 1080, ("ribbon_bg", "ribbon_label"))]:
+        out = resize(load(f)["source"], {"width": w, "height": h})
+        for e in (e for e in out["elements"] if e["id"] in ids):
+            from tools.check import _aabb
+            x, y, fw, fh = _aabb(e)
+            check(f"{e['id']} not flush to edge at {w}x{h}", min(x, y, w - x - fw, h - y - fh) >= 2, str((x, y)))
+
+
+def test_cards_scrims_caps() -> None:
+    from tools.check import check as full_check, snapshot
+    by = lambda out: {e["id"]: e for e in out["elements"]}  # noqa: E731
+    # A card reflows: on a banner its copy stays readable and the panel wraps it.
+    src = load("tests/designs/t27_panel_card.json")["source"]
+    o = by(resize(src, {"width": 728, "height": 90}))
+    check("card copy readable on 728x90", o["b"]["font_size"] >= 7, str(o["b"]["font_size"]))
+    p = o["panel"]
+    check("card panel wraps its copy", all(p["x"] <= o[i]["x"] and o[i]["x"] + o[i]["width"] <= p["x"] + p["width"] + 0.5
+                                           for i in ("h", "b", "cta_label")))
+    # A translucent full-canvas scrim is background, not a card around the headline.
+    o = by(resize(load("tests/designs/t25_bg_variants.json")["source"], {"width": 728, "height": 90}))
+    check("full-canvas scrim stays full-canvas", o["scrim"]["width"] == 728 and o["scrim"]["height"] == 90)
+    # max_lines is a hard cap; a caption on a photo is never out-ranked by smaller copy.
+    for f, w, h in [("tests/designs/t12_max_lines.json", 120, 600), ("tests/designs/t29_text_over_photo.json", 2480, 3508)]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        bad = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0)
+               if c[1] in ("max-lines", "hierarchy")]
+        check(f"max_lines/hierarchy hold: {os.path.basename(f)} at {w}x{h}", not bad, str(bad[:2]))
+    # Source slips do not carry over (same aspect: ribbon past the border, bleeding art
+    # slid onto the headline), and a ribbon finds air along an edge when corners are taken.
+    for f, w, h, code in [("input/chameleon_sample_level3_advanced.json", 2160, 2700, "rotated-off-canvas"),
+                          ("tests/designs/t18_offcanvas_source.json", 1080, 1080, "text-on-shape"),
+                          ("tests/designs/t47_invalid_values.json", 1080, 1350, "edge-touch"),
+                          ("input/chameleon_sample_level3_advanced.json", 820, 312, "edge-touch")]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        bad = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0) if c[1] == code]
+        check(f"no {code}: {os.path.basename(f)} at {w}x{h}", not bad, str(bad[:2]))
+
+
 if __name__ == "__main__":
     for fn in [v for k, v in sorted(globals().items()) if k.startswith("test_")]:
         fn()

@@ -1,0 +1,134 @@
+{
+ "task_id": "t63_footer_bar",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "full-width footer bar holding a link line and the CTA",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 380,
+    "y": 80,
+    "width": 320,
+    "height": 107,
+    "z_index": 331,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 290,
+    "y": 260,
+    "width": 500,
+    "height": 500,
+    "z_index": 332,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 820,
+    "width": 900,
+    "height": 160,
+    "z_index": 333,
+    "content": "Footer strip layout",
+    "font_family": "Solstice Serif",
+    "font_size": 80,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 1000,
+    "width": 800,
+    "height": 100,
+    "z_index": 334,
+    "content": "Botanical sparkling infusions blended with wild honey, blood orange zest and a whisper of smoked rosemary, bottled at the peak of golden hour.",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "foot",
+    "type": "shape",
+    "x": 0,
+    "y": 1190,
+    "width": 1080,
+    "height": 160,
+    "z_index": 4,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)"
+   },
+   {
+    "id": "foot_t",
+    "type": "text",
+    "x": 60,
+    "y": 1240,
+    "width": 600,
+    "height": 60,
+    "z_index": 5,
+    "content": "solstice.com  |  @solsticedrinks",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 760,
+    "y": 1225,
+    "width": 260,
+    "height": 90,
+    "z_index": 335,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 760,
+    "y": 1252.0,
+    "width": 260,
+    "height": 36.0,
+    "z_index": 336,
+    "content": "Shop",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

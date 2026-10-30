@@ -102,7 +102,8 @@ def main():
             results.append({"design": dp.stem, "size": f"{w}x{h}", "findings": findings, "t": round(dt, 2)})
             errs = [f for f in findings if f[0] == "ERR"]
             if findings and (errs or not args.only_errors):
-                print(f"{dp.stem[:30]:30s} {w:>5}x{h:<5} " + " | ".join(f"{s} {c}: {m}" for s, c, m in findings[:4]))
+                shown = sorted(findings, key=lambda f: f[0] != "ERR")[:4]  # errors first, never hidden behind warnings
+                print(f"{dp.stem[:30]:30s} {w:>5}x{h:<5} " + " | ".join(f"{s} {c}: {m}" for s, c, m in shown))
             if args.render and out and not (args.skip_huge and w * h > 12_000_000):
                 png = OUT / f"{dp.stem}__{w}x{h}.png"
                 try:

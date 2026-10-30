@@ -324,6 +324,64 @@ def build():
         *button("p1", 100, 400, 880, 90, "SIGN UP FOR THE NEWSLETTER TODAY", fs=30),
         *button("p2", 100, 540, 880, 90, "DOWNLOAD THE FULL REPORT NOW", fs=30),
         *button("p3", 100, 680, 880, 90, "BOOK A DEMO WITH OUR TEAM", fs=30)], "wide pills that can be tightened")
+
+    # ---- round 3: layouts real designers actually make ------------------------------------------
+    DARK = "rgba(43,27,46,1)"
+    add("t55_two_column_landscape", 1920, 1080, [BG(1920, 1080),
+        I("logo", 120, 80, 300, 100, LOGO),
+        T("h", 120, 300, 760, 260, "Chase the Light this summer", 96, SERIF, align="left", font_weight="bold"),
+        T("s", 120, 600, 700, 160, LOREM, 32, align="left"),
+        *button("cta", 120, 820, 360, 90, "Shop now", fs=30),
+        I("p", 1100, 120, 720, 840, BOT)], "text column left, product right (landscape -> story must stack)")
+    add("t56_icon_rows", 1080, 1350, [BG(1080, 1350),
+        T("h", 90, 100, 900, 150, "Why Solstice", 80, SERIF, font_weight="bold"),
+        *sum([[I(f"ic{i}", 120, 340 + i * 190, 120, 120, BOT),
+               T(f"lb{i}", 280, 360 + i * 190, 700, 80, f"Benefit number {i + 1} explained in one line", 34, align="left")]
+              for i in range(4)], []),
+        *button("cta", 340, 1140, 400, 90, "Learn more", fs=30)], "icon + label feature rows (pairs are not grouped)")
+    add("t57_price_tag", 1080, 1350, [BG(1080, 1350),
+        I("p", 240, 150, 600, 600, BOT),
+        S("tag", 760, 120, 240, 240, "ellipse", "rgba(240,178,66,1)", group_id="tag"),
+        T("cur", 800, 170, 60, 70, "$", 44, font_weight="bold", color=DARK, group_id="tag"),
+        T("amt", 850, 150, 130, 120, "49", 90, SERIF, font_weight="bold", color=DARK, group_id="tag"),
+        T("per", 790, 270, 180, 40, "per case", 22, color=DARK, group_id="tag"),
+        T("h", 90, 820, 900, 180, "Summer price drop", 80, SERIF, font_weight="bold"),
+        T("s", 140, 1020, 800, 120, "Only while the sun is out", 32),
+        *button("cta", 340, 1180, 400, 90, "Order today", fs=30)], "three-text price bubble group + product")
+    add("t58_small_source", 300, 250, [BG(300, 250),
+        I("logo", 100, 10, 100, 33, LOGO), I("p", 110, 50, 80, 80, BOT),
+        T("h", 15, 140, 270, 40, "Chase the Light", 22, SERIF, font_weight="bold"),
+        T("s", 20, 182, 260, 24, "Botanical sparkling infusions", 11),
+        *button("cta", 90, 212, 120, 28, "Shop now", fs=11)], "a 300x250 source scaled UP to posters (native caps, growth)")
+    add("t59_long_paragraph", 1080, 1350, [BG(1080, 1350),
+        T("h", 90, 120, 900, 150, "Our story", 84, SERIF, font_weight="bold"),
+        T("body", 90, 320, 900, 760, (LOREM + " ") * 4 + LOREM, 28, align="left", line_height=1.5),
+        *button("cta", 340, 1160, 400, 90, "Read the full story", fs=28)], "600+ character body copy")
+    add("t60_frame_and_header_bar", 1080, 1350, [BG(1080, 1350),
+        S("frame", 30, 30, 1020, 1290, fill="rgba(0,0,0,0)", stroke_color=W_, stroke_width=4, z=1),
+        S("bar", 0, 0, 1080, 110, fill=DARK, z=2),
+        T("bar_t", 40, 35, 1000, 40, "FREE SHIPPING ON EVERY CASE THIS WEEK", 26, font_weight="bold", z=3),
+        I("p", 290, 220, 500, 500, BOT),
+        T("h", 90, 800, 900, 160, "Framed layout", 80, SERIF, font_weight="bold"),
+        T("s", 140, 1000, 800, 100, LOREM, 28)], "stroke-only frame + opaque header strip with its label")
+    add("t61_photo_top_half", 1080, 1350, [
+        S("base", 0, 0, 1080, 1350, fill="rgba(245,238,228,1)", z=0),
+        I("photo", 0, 0, 1080, 700, BGA, "cover", z=1),
+        T("h", 90, 780, 900, 180, "Golden hour, bottled", 84, SERIF, font_weight="bold", color=DARK),
+        T("s", 140, 980, 800, 140, LOREM, 30, color=DARK),
+        *button("cta", 340, 1180, 400, 90, "Taste it", fs=30)], "cover photo over the top half, copy below on a flat colour")
+    add("t62_split_panels", 1080, 1350, [BG(1080, 1350),
+        S("left", 0, 0, 540, 1350, fill=ORANGE, z=1),
+        T("h", 60, 400, 420, 400, "Half and half", 90, SERIF, font_weight="bold", align="left", z=2),
+        T("s", 60, 850, 420, 200, "The left side is a solid colour panel", 30, align="left", z=2),
+        I("p", 620, 300, 400, 700, BOT, z=2)], "a half-canvas colour panel with text on it")
+    add("t63_footer_bar", 1080, 1350, [BG(1080, 1350),
+        I("logo", 380, 80, 320, 107, LOGO), I("p", 290, 260, 500, 500, BOT),
+        T("h", 90, 820, 900, 160, "Footer strip layout", 80, SERIF, font_weight="bold"),
+        T("s", 140, 1000, 800, 100, LOREM, 28),
+        S("foot", 0, 1190, 1080, 160, fill=DARK, z=4),
+        T("foot_t", 60, 1240, 600, 60, "solstice.com  |  @solsticedrinks", 30, align="left", z=5),
+        *button("cta", 760, 1225, 260, 90, "Shop", group="cta", fs=30)], "full-width footer bar holding a link line and the CTA")
     return D
 
 

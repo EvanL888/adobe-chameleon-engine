@@ -1,0 +1,80 @@
+{
+ "task_id": "t62_split_panels",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "a half-canvas colour panel with text on it",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "left",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 540,
+    "height": 1350,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 60,
+    "y": 400,
+    "width": 420,
+    "height": 400,
+    "z_index": 2,
+    "content": "Half and half",
+    "font_family": "Solstice Serif",
+    "font_size": 90,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 60,
+    "y": 850,
+    "width": 420,
+    "height": 200,
+    "z_index": 2,
+    "content": "The left side is a solid colour panel",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 620,
+    "y": 300,
+    "width": 400,
+    "height": 700,
+    "z_index": 2,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}

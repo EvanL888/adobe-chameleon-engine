@@ -1,0 +1,157 @@
+{
+ "task_id": "t57_price_tag",
+ "difficulty": 0,
+ "difficulty_label": "custom",
+ "notes": "three-text price bubble group + product",
+ "source": {
+  "canvas": {
+   "width": 1080,
+   "height": 1350
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1350,
+    "z_index": 0,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "p",
+    "type": "image",
+    "x": 240,
+    "y": 150,
+    "width": 600,
+    "height": 600,
+    "z_index": 305,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "tag",
+    "type": "shape",
+    "x": 760,
+    "y": 120,
+    "width": 240,
+    "height": 240,
+    "z_index": 306,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(240,178,66,1)",
+    "group_id": "tag"
+   },
+   {
+    "id": "cur",
+    "type": "text",
+    "x": 800,
+    "y": 170,
+    "width": 60,
+    "height": 70,
+    "z_index": 307,
+    "content": "$",
+    "font_family": "Solstice Sans",
+    "font_size": 44,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "tag"
+   },
+   {
+    "id": "amt",
+    "type": "text",
+    "x": 850,
+    "y": 150,
+    "width": 130,
+    "height": 120,
+    "z_index": 308,
+    "content": "49",
+    "font_family": "Solstice Serif",
+    "font_size": 90,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "tag"
+   },
+   {
+    "id": "per",
+    "type": "text",
+    "x": 790,
+    "y": 270,
+    "width": 180,
+    "height": 40,
+    "z_index": 309,
+    "content": "per case",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "group_id": "tag"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 90,
+    "y": 820,
+    "width": 900,
+    "height": 180,
+    "z_index": 310,
+    "content": "Summer price drop",
+    "font_family": "Solstice Serif",
+    "font_size": 80,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 140,
+    "y": 1020,
+    "width": 800,
+    "height": 120,
+    "z_index": 311,
+    "content": "Only while the sun is out",
+    "font_family": "Solstice Sans",
+    "font_size": 32,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center"
+   },
+   {
+    "id": "cta_bg",
+    "type": "shape",
+    "x": 340,
+    "y": 1180,
+    "width": 400,
+    "height": 90,
+    "z_index": 312,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "cta"
+   },
+   {
+    "id": "cta_label",
+    "type": "text",
+    "x": 340,
+    "y": 1207.0,
+    "width": 400,
+    "height": 36.0,
+    "z_index": 313,
+    "content": "Order today",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "cta"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 1080,
+  "height": 1350
+ }
+}
