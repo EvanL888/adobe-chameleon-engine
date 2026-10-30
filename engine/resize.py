@@ -379,6 +379,7 @@ class _Unit:
         self.ff = (6.0, 0.4)
         self.is_hero = False
         self.min_w = 0.0    # legibility floor (px) for logo-like pictures
+        self.min_side = 0.0  # the hero picture's longer side never drops below this (px)
         self.prio = 1.0     # <1: minor text that yields space to the headline when tight
         self.cap_w = None   # shared width cap so sibling units end up the same size
         self.sib = None     # list of sibling units (similar widgets)
@@ -412,7 +413,8 @@ class _ImageUnit(_Unit):
 
     def measure(self, s: float, cw: float) -> dict:
         pr = _pr(self.prio, s)  # pictures yield to text when tight; the hero grows back if room is left
-        g = max(s * self.boost * pr, self.min_w * min(1.0, self.ff[0] / 6.0) / max(self.fw, 1e-6))
+        g = max(s * self.boost * pr, self.min_w * min(1.0, self.ff[0] / 6.0) / max(self.fw, 1e-6),
+                self.min_side * (self.ff[0] >= 7.0) / max(self.fw, self.fh, 1e-6))  # yields once text is below 7px
         g = min(g, cw / max(self.fw, 1e-6))
         if self.g_native:
             g = min(g, self.g_native)
@@ -1029,12 +1031,46 @@ def _side_aligned(u: _Unit, col: list[_Unit], geo: _Geo):
     return None
 
 
+_HERO_MIN = 20.0  # px: a product shot smaller than this is a smudge, not a picture
+
+
+def _hero_side(units: list[_Unit], best, geo: _Geo) -> float | None:
+    """Longer side of the hero picture as the chosen layout would place it
+    (after it grows into leftover room), or None if there is no free hero."""
+    hero = next((u for u in units if isinstance(u, _ImageUnit) and u.is_hero), None)
+    if hero is None or best is None:
+        return None
+    _, s, cols, widths, ff = best
+    _set_ff(units, ff)
+    _apply_caps(units, cols, widths)
+    for c, cw in zip(cols, widths):
+        if hero in c:
+            hero.boost = 1.0
+            hero.boost = _hero_boost(c, s, cw, geo.H - 2 * geo.my)
+            m = hero.measure(s, min(cw, hero.cap_w) if hero.cap_w else cw)
+            hero.boost = 1.0
+            return max(m["w"], m["h"])
+    return None
+
+
 def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
     """Returns (placed elements, occupied rects [(x,y,w,h,weight)])."""
     best = _search(units, geo, s_cap)
     if best is None:
         return None
-    _, s, cols, widths, ff = best
+    side = _hero_side(units, best, geo)
+    if side is not None and side < _HERO_MIN:
+        # The hero shrank to a smudge. Try again with it held at a visible size
+        # and keep whichever layout scores better once invisibility is charged.
+        hero = next(u for u in units if isinstance(u, _ImageUnit) and u.is_hero)
+        hero.min_side = _HERO_MIN
+        alt = _search(units, geo, s_cap)
+        penalised = best[0] * (max(side, 1.0) / _HERO_MIN) ** 0.3
+        if alt is not None and alt[0] > penalised:
+            best = alt
+        else:
+            hero.min_side = 0.0
+    score, s, cols, widths, ff = best
     _tls.exact = True
     _apply_caps(units, cols, widths)
     for u in units:
@@ -1085,7 +1121,7 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
                     occ.append((cx - fw / 2, cy - fh / 2, fw, fh, wgt))
             y += m["h"] + (gaps[i] if i < len(gaps) else 0.0)
         x += cw + geo.colgap
-    return out, occ, s
+    return out, occ, s, score
 
 
 # --------------------------------------------------------------------------
@@ -1093,18 +1129,18 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
 # --------------------------------------------------------------------------
 
 def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
-                occ: list[tuple], kfix: float | None = None) -> list[dict]:
+                occ: list[tuple], kfix: float | None = None, label_floor: float = 6.0) -> list[dict]:
     """Park decoration (or, with kfix, corner-anchored pictures at that scale)
     where it collides least with what is already placed."""
     Ws, Hs = src_wh
     W, H = geo.W, geo.H
     sd = kfix if kfix is not None else min(W / Ws, H / Hs)
-    shrinks = (1.0, 0.8, 0.65, 0.5, 0.35, 0.25) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
+    shrinks = (1.0, 0.8, 0.65, 0.5, 0.35, 0.25, 0.18, 0.12) if kfix is not None else (1.0, 0.75, 0.55, 0.4, 0.25)
     placed = []
     for e in sorted(deco, key=lambda e: -(e.w * e.h if isinstance(e, _Cluster) else _area(_box(e)))):
         if isinstance(e, _Cluster):  # a corner sticker (ribbon, badge): its box already holds the rotation
             x, y, w, h, rot = e.x0, e.y0, e.w, e.h, 0.0
-            kmin = max([6.0 / float(m.get("font_size", 16)) for m in e.els if m["type"] == "text"] + [0.0])
+            kmin = max([label_floor / float(m.get("font_size", 16)) for m in e.els if m["type"] == "text"] + [0.0])
         else:
             x, y, w, h = _box(e)
             rot = _rot(e)
@@ -1112,6 +1148,16 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
         fw0, fh0 = _fp(w, h, rot)
         fw0, fh0 = max(fw0, 1e-3), max(fh0, 1e-3)
         cx, cy = x + w / 2, y + h / 2
+        # What actually occupies space, relative to the footprint's top-left: each
+        # member's own rotated outline (a tilted ribbon fills only a band of its box).
+        parts = [(0.0, 0.0, fw0, fh0)]
+        if isinstance(e, _Cluster):
+            parts = []
+            for m in e.els:
+                mx_, my_, mw_, mh_ = _box(m)
+                pw, ph = _fp(mw_, mh_, _rot(m))
+                parts.append((mx_ + mw_ / 2 - pw / 2 - x, my_ + mh_ / 2 - ph / 2 - y, pw, ph))
+        p_area = max(1.0, sum(pw * ph for _, _, pw, ph in parts))
         best = None
         for shrink in shrinks:
             k = min(sd * shrink, 0.8 * W / fw0, 0.8 * H / fh0)
@@ -1130,14 +1176,18 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
                 for py in (fh / 2, H - fh / 2):
                     cands.append((px, py))
             cands += [(W / 2, fh / 2), (W / 2, H - fh / 2), (fw / 2, H / 2), (W - fw / 2, H / 2)]
-            mx = geo.my if fw + 2 * geo.my <= W else 0.0  # keep a little air from the canvas edge
-            my = geo.my if fh + 2 * geo.my <= H else 0.0
-            for px, py in cands:
-                px = _clamp(px, mx + fw / 2, W - mx - fw / 2)
-                py = _clamp(py, my + fh / 2, H - my - fh / 2)
-                rect = (px - fw / 2, py - fh / 2, fw, fh)
-                cost = sum(_inter(rect, o[:4]) * (6.0 if kfix is not None else o[4]) for o in occ) / max(1.0, fw * fh)
-                cost += 0.15 * (1 - shrink)
+            m = geo.my
+            mx = m if fw + 2 * m <= W else 0.0  # keep a little air from the canvas edge...
+            my = m if fh + 2 * m <= H else 0.0
+            for (px, py), air in itertools.product(cands, (1, 0)):
+                if not air and not (mx or my):
+                    continue
+                px = _clamp(px, mx * air + fw / 2, W - mx * air - fw / 2)
+                py = _clamp(py, my * air + fh / 2, H - my * air - fh / 2)
+                rx, ry = px - fw / 2, py - fh / 2
+                cost = sum(_inter((rx + qx_ * k, ry + qy_ * k, qw * k, qh * k), o[:4]) * (6.0 if kfix is not None else o[4])
+                           for qx_, qy_, qw, qh in parts for o in occ) / max(1.0, p_area * k * k)
+                cost += 0.15 * (1 - shrink) + (0.0 if air else 0.02)  # ...unless hugging the edge avoids a collision
                 if best is None or cost < best[0] - 1e-9:
                     best = (cost, px, py, k)
                 if cost < 0.01 and shrink == 1.0:
@@ -1476,28 +1526,62 @@ def _resize(source: dict, target: dict) -> dict:
             n.update(x=0, y=y / Hs * H, width=W, height=h / Hs * H)
         out[n["id"]] = _scale_style(n, min(W / Ws, H / Hs))
 
-    occ: list[tuple] = []
-    s_used = 0.5 * min(W / Ws, H / Hs)
-    if units:
-        res = _layout(units, geo, s_cap)
-        if res is None:
-            raise RuntimeError("no feasible layout")
-        placed, occ, s_used = res
-        for e in placed:
-            out[e["id"]] = e
-        _cap_hierarchy(units, out)
-
-    # Corner-anchored pictures and small missing assets keep a corner; place them first
-    # (they matter more than decoration) and let decoration fill in around them.
     pieces, seen = [], set()
     for e in list(lost) + list(anchors):
         key = id(e) if isinstance(e, _Cluster) else e["id"]
         if key not in seen:
             seen.add(key)
             pieces.append(e)
-    # Stickers scale with the layout, but never beyond ~1.3x their share of the canvas.
-    kfix = min(max(s_used, 0.5 * min(W / Ws, H / Hs)), 1.3 * max(W / Ws, H / Hs), 1.3 * s_used)
-    anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=kfix)
+
+    first = None
+    for attempt in range(2):
+        _tls.exact = False
+        occ: list[tuple] = []
+        s_used = 0.5 * min(W / Ws, H / Hs)
+        score = 0.0
+        laid: dict[str, dict] = {}
+        if units:
+            res = _layout(units, geo, s_cap)
+            if res is None:
+                raise RuntimeError("no feasible layout")
+            placed, occ, s_used, score = res
+            for e in placed:
+                laid[e["id"]] = e
+            _cap_hierarchy(units, laid)
+        # Corner-anchored pictures and small missing assets keep a corner; place them first
+        # (they matter more than decoration) and let decoration fill in around them.
+        # Stickers scale with the layout, but never beyond ~1.3x their share of the canvas.
+        kfix = min(max(s_used, 0.5 * min(W / Ws, H / Hs)), 1.3 * max(W / Ws, H / Hs), 1.3 * s_used)
+        # A sticker's label need not stay bigger than the copy the layout could afford.
+        fl = min([6.0] + [e["font_size"] for e in laid.values() if e["type"] == "text"
+                          and str(e.get("content", "")).strip()])
+        anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=kfix, label_floor=fl)
+        # A corner widget that cannot find a free corner (tiny banner) rejoins the flow instead.
+        by_id = {e["id"]: e for e in anchored}
+        def _hits(m: dict, o: tuple) -> bool:
+            # Same pairs the checker treats as collisions: text vs anything placed,
+            # picture vs text/picture, shape vs text (o[4]: 1 text, 0.5 shape, 0.15 picture).
+            t = m["type"]
+            if (t == "image" and o[4] == 0.5) or (t == "shape" and o[4] != 1.0):
+                return False
+            e = by_id[m["id"]]
+            fw, fh = _fp(e["width"], e["height"], _rot(e))
+            r = (e["x"] + e["width"] / 2 - fw / 2, e["y"] + e["height"] / 2 - fh / 2, fw, fh)
+            return _inter(r, o[:4]) > max(4.0, 0.02 * min(_area(r), _area(o[:4])))
+
+        stuck = [p for p in pieces if isinstance(p, _Cluster) and attempt == 0
+                 and any(_hits(m, o) for m in p.els for o in occ)]
+        if attempt == 1 and score < 0.8 * first[0]:
+            # Rescuing the corner widget would shrink everything: keep the first layout.
+            score, laid, occ, anchored = first
+            break
+        first = (score, laid, occ, anchored)
+        if not stuck:
+            break
+        pieces = [p for p in pieces if p not in stuck]
+        units = sorted(units + stuck, key=lambda u: (u.cy, u.cx))
+        _link_siblings(units)
+    out.update(laid)
     for e in anchored:
         out[e["id"]] = e
         fw, fh = _fp(e["width"], e["height"], _rot(e))

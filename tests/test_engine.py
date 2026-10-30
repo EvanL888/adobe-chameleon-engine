@@ -193,6 +193,21 @@ def test_legibility_and_widgets() -> None:
     check("call to action stays below the body copy", o["cta_bg"]["y"] > o["s"]["y"] + o["s"]["height"] - 1)
 
 
+def test_corner_pieces_never_land_on_content() -> None:
+    from engine.resize import _ink_box
+    from tools.check import check as full_check, snapshot
+    for f, w, h in [("input/chameleon_sample_level2_core.json", 320, 50),
+                    ("tests/designs/t22_missing_assets.json", 5400, 7200),
+                    ("tests/designs/t22_missing_assets.json", 1112, 1350)]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        errs = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0) if c[0] == "ERR"]
+        check(f"no collisions: {os.path.basename(f)} at {w}x{h}", not errs, str(errs[:2]))
+    out = resize(load("input/chameleon_sample_level2_core.json")["source"], {"width": 320, "height": 50})
+    p = next(e for e in out["elements"] if e["id"] == "product")
+    check("hero picture stays visible on a 320x50 banner", max(p["width"], p["height"]) >= 20, str(p["width"]))
+
+
 if __name__ == "__main__":
     for fn in [v for k, v in sorted(globals().items()) if k.startswith("test_")]:
         fn()
