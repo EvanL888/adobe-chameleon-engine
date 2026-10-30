@@ -206,6 +206,14 @@ def test_corner_pieces_never_land_on_content() -> None:
     out = resize(load("input/chameleon_sample_level2_core.json")["source"], {"width": 320, "height": 50})
     p = next(e for e in out["elements"] if e["id"] == "product")
     check("hero picture stays visible on a 320x50 banner", max(p["width"], p["height"]) >= 20, str(p["width"]))
+    # Stickers keep some air from the canvas edge when there is room (flush reads as clipped).
+    for f, w, h, ids in [("input/chameleon_sample_level2_core.json", 300, 600, ("badge_label",)),
+                         ("input/chameleon_sample_level3_advanced.json", 1350, 1080, ("ribbon_bg", "ribbon_label"))]:
+        out = resize(load(f)["source"], {"width": w, "height": h})
+        for e in (e for e in out["elements"] if e["id"] in ids):
+            from tools.check import _aabb
+            x, y, fw, fh = _aabb(e)
+            check(f"{e['id']} not flush to edge at {w}x{h}", min(x, y, w - x - fw, h - y - fh) >= 2, str((x, y)))
 
 
 if __name__ == "__main__":

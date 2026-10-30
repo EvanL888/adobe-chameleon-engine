@@ -1179,15 +1179,17 @@ def _place_deco(deco: list[dict], src_wh: tuple[int, int], geo: _Geo,
             m = geo.my
             mx = m if fw + 2 * m <= W else 0.0  # keep a little air from the canvas edge...
             my = m if fh + 2 * m <= H else 0.0
-            for (px, py), air in itertools.product(cands, (1, 0)):
-                if not air and not (mx or my):
+            for (px, py), air in itertools.product(cands, (1, 0.35, 0)):
+                if air < 1 and not (mx or my):
                     continue
                 px = _clamp(px, mx * air + fw / 2, W - mx * air - fw / 2)
                 py = _clamp(py, my * air + fh / 2, H - my * air - fh / 2)
                 rx, ry = px - fw / 2, py - fh / 2
                 cost = sum(_inter((rx + qx_ * k, ry + qy_ * k, qw * k, qh * k), o[:4]) * (6.0 if kfix is not None else o[4])
                            for qx_, qy_, qw, qh in parts for o in occ) / max(1.0, p_area * k * k)
-                cost += 0.15 * (1 - shrink) + (0.0 if air else 0.02)  # ...unless hugging the edge avoids a collision
+                # ...unless less air avoids a collision; flush to the edge reads as clipped,
+                # so it costs more than a modest shrink.
+                cost += 0.15 * (1 - shrink) + {1: 0.0, 0.35: 0.035, 0: 0.08}[air]
                 if best is None or cost < best[0] - 1e-9:
                     best = (cost, px, py, k)
                 if cost < 0.01 and shrink == 1.0:
