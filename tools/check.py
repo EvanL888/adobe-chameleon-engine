@@ -219,6 +219,8 @@ def check(source: dict, source_snapshot: dict, out: dict, target: dict, elapsed:
     texts = [e for e in source["elements"] if e["type"] == "text" and e.get("content", "").strip()]
     bad = 0
     for a in texts:
+        if len(a["content"].strip()) <= 2:
+            continue  # a currency sign or bullet is not a heading
         for b in texts:
             if a["font_size"] >= 1.3 * b["font_size"]:
                 if out_els[a["id"]]["font_size"] < 0.92 * out_els[b["id"]]["font_size"]:

@@ -188,13 +188,12 @@ class _Txt:
         """Shrink fs until the widest line fits max_w (always) and the block
         fits max_h (down to min_fs). Returns (fs, lines, text_height)."""
         fs = max(1.0, fs)
-        start = fs
         n, w = self.layout(fs, max_w)
         for _ in range(80):
             if w > max_w * 1.0005 + 0.01 and fs > 1.0:
                 fs = max(1.0, fs * max(0.5, 0.995 * max_w / w))
-            elif self.max_lines and n > self.max_lines and fs > max(min_fs, 1.0, 0.5 * start):
-                fs = max(min_fs, 1.0, 0.5 * start, fs * 0.96)
+            elif self.max_lines and n > self.max_lines and fs > 1.0:  # a hard cap: the search sees the smaller font
+                fs = max(1.0, fs * 0.96)
             elif max_h is not None and self.height(n, fs) > max_h + 0.01 and fs > max(min_fs, 1.0):
                 fs = max(min_fs, 1.0, fs * 0.95)
             else:
@@ -947,9 +946,18 @@ def _measure_factor(cols, widths, s: float) -> float:
     return f
 
 
-def _set_ff(units: list[_Unit], ff: tuple) -> None:
+def _set_ff(units: list[_Unit], ff: tuple, geo: "_Geo | None" = None) -> None:
     for u in units:
         u.ff = ff
+        if geo is not None and isinstance(u, _Cluster) and u.txt and not u.has_rot \
+                and any(e["type"] == "image" for e in u.els):
+            # Text on a picture whose small print would need it bigger than the canvas (a price
+            # bubble on a product, on a 90px banner) gets a floor it can meet, so it does
+            # not drag every other text down to no floor at all.
+            gmax = 0.9 * min((geo.H - 2 * geo.my) / max(u.h, 1e-6), (geo.W - 2 * geo.mx) / max(u.w, 1e-6))
+            fg = u.floor_g()
+            if fg > gmax:
+                u.ff = (ff[0] * gmax / fg, ff[1] * gmax / fg)
         if isinstance(u, _RowFlow):
             for k in u.kids:
                 k.ff = ff
@@ -969,7 +977,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
     cap_parts = 120 if n <= 14 else max(3, 240 // (3 * len(ks)))
     coarse = []
     for ff in levels:
-        _set_ff(units, ff)
+        _set_ff(units, ff, geo)
         level_best = 0.0
         for k in ks:
             parts = list(_partitions(n, k))
@@ -997,7 +1005,7 @@ def _search(units: list[_Unit], geo: _Geo, s_cap: float):
     coarse.sort(key=lambda c: -c[0])
     best = None
     for _, cols, widths, ff in coarse[:8]:
-        _set_ff(units, ff)
+        _set_ff(units, ff, geo)
         k = len(cols)
         _apply_caps(units, cols, widths)
         s = _max_scale(cols, widths, hc, s_cap, 18)
@@ -1041,7 +1049,7 @@ def _hero_side(units: list[_Unit], best, geo: _Geo) -> float | None:
     if hero is None or best is None:
         return None
     _, s, cols, widths, ff = best
-    _set_ff(units, ff)
+    _set_ff(units, ff, geo)
     _apply_caps(units, cols, widths)
     for c, cw in zip(cols, widths):
         if hero in c:
@@ -1073,11 +1081,7 @@ def _layout(units: list[_Unit], geo: _Geo, s_cap: float):
     score, s, cols, widths, ff = best
     _tls.exact = True
     _apply_caps(units, cols, widths)
-    for u in units:
-        u.ff = ff
-        if isinstance(u, _RowFlow):
-            for k in u.kids:
-                k.ff = ff
+    _set_ff(units, ff, geo)
     W, H = geo.W, geo.H
     hc = H - 2 * geo.my
     out, occ = [], []
@@ -1292,7 +1296,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
             continue
         cov = _coverage(e, Ws, Hs)
         if (e["type"] == "image" and cov >= 0.85 and not _rot(e)) or \
-           (e["type"] == "shape" and cov >= 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e)):
+           (e["type"] == "shape" and cov >= 0.9 and not _rot(e)):  # a full-canvas tint/scrim, at any opacity
             bg.append(e)
         elif e["type"] == "shape" and 0.3 <= cov < 0.9 and float(e.get("opacity", 1)) >= 0.5 and not _rot(e) \
                 and (_spans(e, "x", Ws) or _spans(e, "y", Hs)):
@@ -1321,6 +1325,20 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                 deco.remove(sh)
                 content.append(sh)
             panels.append(sh)
+
+    # A card: one opaque panel holding all the other content. The content reflows
+    # like any layout and the panel is redrawn around wherever it lands, instead of
+    # shrinking the whole card as one block (a tiny box of text on a banner).
+    card = None
+    for sh in sorted(panels, key=lambda p: -_area(_box(p))):
+        rest = [c for c in content if c is not sh]
+        sb = _box(sh)
+        if not sh.get("group_id") and float(sh.get("opacity", 1)) >= 0.9 and len(rest) >= 2 \
+                and all(_inter(sb, _box(c)) >= 0.7 * _area(_box(c)) for c in rest):
+            card = sh
+            content.remove(sh)
+            panels.remove(sh)
+        break
 
     # Small free pictures parked in a corner (watermark, corner logo) stay there.
     anchors = []
@@ -1436,7 +1454,7 @@ def _build_units(els: list[dict], Ws: int, Hs: int):
                 anchors.append(u)
     units.sort(key=lambda u: (u.cy, u.cx))
     _link_siblings(units)
-    return bg, bands, deco, lost + anchors, anchors, units
+    return bg, bands, deco, lost + anchors, anchors, units, card
 
 
 def _scale_style(n: dict, k: float) -> dict:
@@ -1481,17 +1499,22 @@ def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
     """A smaller source text must never end up bigger than a clearly larger one
     (a long unbreakable headline word can force its font down)."""
     texts = [u for u in units if isinstance(u, _TextUnit)]
+    # References: free texts, plus the largest label of each cluster (a caption on a
+    # photo is capped by the photo's resolution; copy must not outgrow it). Only the
+    # largest, so a "$" set beside a price does not count as a headline.
+    refs = [(u.t.f, u.el["id"]) for u in texts]
+    refs += [max((t.f, i) for i, t in u.txt.items()) for u in units if isinstance(u, _Cluster) and u.txt]
     for b in texts:
         e = placed.get(b.el["id"])
         if not e:
             continue
         cap = None
-        for a in texts:
-            if a is b or a.t.f < 1.3 * b.t.f:
+        for fa_src, aid in refs:
+            if aid == b.el["id"] or fa_src < 1.3 * b.t.f:
                 continue
-            fa = placed.get(a.el["id"])
+            fa = placed.get(aid)
             if fa and fa["font_size"] > 7.5:  # both tiny: legibility beats hierarchy
-                c = fa["font_size"] * max(0.92, 0.95 * (b.t.f / a.t.f) ** 0.5)
+                c = fa["font_size"] * max(0.92, 0.95 * (b.t.f / fa_src) ** 0.5)
                 cap = c if cap is None else min(cap, c)
         if cap is not None and e["font_size"] > cap:
             fs, n, th = b.t.fit(cap, e["width"])
@@ -1501,13 +1524,30 @@ def _cap_hierarchy(units: list[_Unit], placed: dict[str, dict]) -> None:
                 e["letter_spacing"] = b.t.ls0 * fs / b.t.f
 
 
+def _card(card: dict, members: list[dict], laid: dict[str, dict], s: float, geo: _Geo, occ: list) -> dict:
+    """Redraw a card panel around its reflowed content, keeping its padding (scaled)."""
+    cx, cy, cw, ch = _box(card)
+    sx0 = min(_box(m)[0] for m in members); sy0 = min(_box(m)[1] for m in members)
+    sx1 = max(_box(m)[0] + _box(m)[2] for m in members); sy1 = max(_box(m)[1] + _box(m)[3] for m in members)
+    pad_src = max(0.0, min(sx0 - cx, sy0 - cy, cx + cw - sx1, cy + ch - sy1))
+    out = [laid[m["id"]] for m in members]
+    x0 = min(e["x"] for e in out); y0 = min(e["y"] for e in out)
+    x1 = max(e["x"] + e["width"] for e in out); y1 = max(e["y"] + e["height"] for e in out)
+    # Never off the canvas, and keep some background showing around the card.
+    pad = max(0.0, min(pad_src * s, 0.5 * min(x0, y0, geo.W - x1, geo.H - y1)))
+    n = _scale_style(dict(card), s)
+    n.update(x=x0 - pad, y=y0 - pad, width=x1 - x0 + 2 * pad, height=y1 - y0 + 2 * pad)
+    occ.append((n["x"], n["y"], n["width"], n["height"], 0.5))
+    return n
+
+
 def _resize(source: dict, target: dict) -> dict:
     Ws, Hs = int(source["canvas"]["width"]), int(source["canvas"]["height"])
     W, H = int(target["width"]), int(target["height"])
     if abs(math.log((W / H) / (Ws / Hs))) < 0.06:  # ~6%: nothing to rearrange, scale and crop the bg
         return _uniform(source, target)
     els = [dict(e) for e in source["elements"]]
-    bg, bands, deco, lost, anchors, units = _build_units(els, Ws, Hs)
+    bg, bands, deco, lost, anchors, units, card = _build_units(els, Ws, Hs)
     geo = _Geo(W, H, Ws, Hs)
     s_cap = 1.6 * max(math.sqrt((W * H) / (Ws * Hs)), 0.7 * max(W / Ws, H / Hs))
 
@@ -1557,6 +1597,13 @@ def _resize(source: dict, target: dict) -> dict:
         # A sticker's label need not stay bigger than the copy the layout could afford.
         fl = min([6.0] + [e["font_size"] for e in laid.values() if e["type"] == "text"
                           and str(e.get("content", "")).strip()])
+        # ...but never under copy it outranks (a 20px ribbon must not end up below 15px badges).
+        lab = [float(m.get("font_size", 16)) for p in pieces if isinstance(p, _Cluster)
+               for m in p.els if m["type"] == "text"]
+        src_fs = {e["id"]: float(e.get("font_size", 16)) for e in els if e["type"] == "text"}
+        if lab:
+            fl = max([fl] + [0.92 * e["font_size"] for i, e in laid.items()
+                             if i in src_fs and 1.3 * src_fs[i] <= min(lab)])
         anchored = _place_deco(pieces, (Ws, Hs), geo, occ, kfix=kfix, label_floor=fl)
         # A corner widget that cannot find a free corner (tiny banner) rejoins the flow instead.
         by_id = {e["id"]: e for e in anchored}
@@ -1584,6 +1631,8 @@ def _resize(source: dict, target: dict) -> dict:
         units = sorted(units + stuck, key=lambda u: (u.cy, u.cx))
         _link_siblings(units)
     out.update(laid)
+    if card is not None:
+        out[card["id"]] = _card(card, [e for e in els if e["id"] in laid and e is not card], laid, s_used, geo, occ)
     for e in anchored:
         out[e["id"]] = e
         fw, fh = _fp(e["width"], e["height"], _rot(e))

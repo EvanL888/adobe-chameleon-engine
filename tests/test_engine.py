@@ -216,6 +216,28 @@ def test_corner_pieces_never_land_on_content() -> None:
             check(f"{e['id']} not flush to edge at {w}x{h}", min(x, y, w - x - fw, h - y - fh) >= 2, str((x, y)))
 
 
+def test_cards_scrims_caps() -> None:
+    from tools.check import check as full_check, snapshot
+    by = lambda out: {e["id"]: e for e in out["elements"]}  # noqa: E731
+    # A card reflows: on a banner its copy stays readable and the panel wraps it.
+    src = load("tests/designs/t27_panel_card.json")["source"]
+    o = by(resize(src, {"width": 728, "height": 90}))
+    check("card copy readable on 728x90", o["b"]["font_size"] >= 7, str(o["b"]["font_size"]))
+    p = o["panel"]
+    check("card panel wraps its copy", all(p["x"] <= o[i]["x"] and o[i]["x"] + o[i]["width"] <= p["x"] + p["width"] + 0.5
+                                           for i in ("h", "b", "cta_label")))
+    # A translucent full-canvas scrim is background, not a card around the headline.
+    o = by(resize(load("tests/designs/t25_bg_variants.json")["source"], {"width": 728, "height": 90}))
+    check("full-canvas scrim stays full-canvas", o["scrim"]["width"] == 728 and o["scrim"]["height"] == 90)
+    # max_lines is a hard cap; a caption on a photo is never out-ranked by smaller copy.
+    for f, w, h in [("tests/designs/t12_max_lines.json", 120, 600), ("tests/designs/t29_text_over_photo.json", 2480, 3508)]:
+        src = load(f)["source"]
+        out = resize(src, {"width": w, "height": h})
+        bad = [c for c in full_check(src, snapshot(src), out, {"width": w, "height": h}, 0.0)
+               if c[1] in ("max-lines", "hierarchy")]
+        check(f"max_lines/hierarchy hold: {os.path.basename(f)} at {w}x{h}", not bad, str(bad[:2]))
+
+
 if __name__ == "__main__":
     for fn in [v for k, v in sorted(globals().items()) if k.startswith("test_")]:
         fn()
